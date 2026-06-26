@@ -1,0 +1,10 @@
+node_modules/
+pdfs/
+logs/
+*.xlsx
+~$*.xlsx
+factures_entrees/
+factures_traitees/
+mapping_entrees/
+mapping_traites/
+.DS_Store
