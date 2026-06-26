@@ -1,7 +1,9 @@
 'use strict';
 
 const express       = require('express');
-const { handleFeuille } = require('./modules/webhook');
+const path          = require('path');
+const { handleFeuille }            = require('./modules/webhook');
+const { readWorkbook, getSheetData } = require('./modules/excel');
 const parserFacture = require('./modules/parser-facture');
 const parserMapping = require('./modules/parser-mapping');
 const logger        = require('./modules/logger');
@@ -10,6 +12,8 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/pdfs', express.static(path.join(__dirname, 'pdfs')));
 
 // Allow fetch from file:// (Origin: null) and any local origin
 app.use((req, res, next) => {
@@ -23,6 +27,21 @@ app.use((req, res, next) => {
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.post('/feuille-heures', handleFeuille);
+
+app.get('/api/dashboard', (_req, res) => {
+  try {
+    const wb = readWorkbook();
+    res.json({
+      feuilles:  getSheetData(wb, 'Feuilles'),
+      facture:   getSheetData(wb, 'Facture'),
+      mapping:   getSheetData(wb, 'Mapping'),
+      controles: getSheetData(wb, 'Controles'),
+    });
+  } catch (err) {
+    logger.err(`Dashboard API : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
