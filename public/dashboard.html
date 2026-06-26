@@ -260,6 +260,9 @@
     .btn-primary { background: var(--navy); color: var(--white); }
     .btn-ghost   { background: var(--gray-100); color: var(--gray-800); }
 
+    /* ── PDFs section ───────────────────────────────── */
+    .pdfs-section { margin-top: 32px; }
+
     /* ── Responsive ─────────────────────────────────── */
     @media (max-width: 900px) {
       .stats { grid-template-columns: 1fr 1fr; }
@@ -325,6 +328,19 @@
   <!-- Table -->
   <div class="table-wrapper">
     <div id="table-container" class="placeholder">Chargement…</div>
+  </div>
+
+  <!-- PDFs signés -->
+  <div class="pdfs-section">
+    <div class="toolbar">
+      <div class="section-title">PDFs signés</div>
+      <div class="toolbar-right">
+        <a href="/api/pdfs/zip" class="btn btn-primary">&#128230; Tout télécharger (ZIP)</a>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <div id="pdfs-container" class="placeholder">Chargement…</div>
+    </div>
   </div>
 
 </main>
@@ -575,6 +591,45 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
+/* ── PDFs ──────────────────────────────────────────── */
+async function loadPdfs() {
+  try {
+    const r = await fetch('/api/pdfs');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    renderPdfs(await r.json());
+  } catch (e) {
+    document.getElementById('pdfs-container').innerHTML =
+      `<div class="placeholder"><strong>Erreur</strong>${e.message}</div>`;
+  }
+}
+
+function renderPdfs(pdfs) {
+  const container = document.getElementById('pdfs-container');
+  if (!pdfs.length) {
+    container.innerHTML = '<div class="placeholder"><strong>Aucun PDF</strong>Aucune feuille signée disponible.</div>';
+    return;
+  }
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th>Nom du fichier</th><th>Date</th><th>Taille</th><th></th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  pdfs.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="name-cell">${esc(p.nom)}</td>
+      <td>${esc(p.date)}</td>
+      <td style="color:var(--gray-600)">${esc(p.taille)}</td>
+      <td style="text-align:right">
+        <a href="${p.url}" download="${esc(p.nom)}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">&#11123; Télécharger</a>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(tbl);
+}
+
 /* ── Events ────────────────────────────────────────── */
 document.getElementById('semaine-filter').addEventListener('change', e => {
   filterSemaine = e.target.value;
@@ -598,6 +653,7 @@ document.addEventListener('keydown', e => {
 
 /* ── Boot ──────────────────────────────────────────── */
 load();
+loadPdfs();
 setInterval(load, 60_000);
 </script>
 </body>

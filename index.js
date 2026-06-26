@@ -3,6 +3,7 @@
 const express       = require('express');
 const path          = require('path');
 const fs            = require('fs');
+const archiver      = require('archiver');
 const { handleFeuille }            = require('./modules/webhook');
 const { readWorkbook, getSheetData } = require('./modules/excel');
 const parserFacture = require('./modules/parser-facture');
@@ -84,6 +85,49 @@ app.get('/api/dashboard', (_req, res) => {
     logger.err(`Dashboard API : ${err.message}`);
     res.status(500).json({ error: err.message });
   }
+});
+
+const PDFS_DIR = path.join(__dirname, 'pdfs');
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+app.get('/api/pdfs', (_req, res) => {
+  try {
+    if (!fs.existsSync(PDFS_DIR)) return res.json([]);
+    const files = fs.readdirSync(PDFS_DIR)
+      .filter(f => f.toLowerCase().endsWith('.pdf'))
+      .map(f => {
+        const stat = fs.statSync(path.join(PDFS_DIR, f));
+        return {
+          nom:    f,
+          url:    `/pdfs/${encodeURIComponent(f)}`,
+          taille: formatSize(stat.size),
+          date:   stat.mtime.toISOString().slice(0, 10),
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+    res.json(files);
+  } catch (err) {
+    logger.err(`API pdfs : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/pdfs/zip', (_req, res) => {
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="pdfs-signes.zip"');
+  const archive = archiver('zip', { zlib: { level: 6 } });
+  archive.on('error', err => {
+    logger.err(`ZIP pdfs : ${err.message}`);
+    if (!res.headersSent) res.status(500).end();
+  });
+  archive.pipe(res);
+  if (fs.existsSync(PDFS_DIR)) archive.directory(PDFS_DIR, false);
+  archive.finalize();
 });
 
 app.get('/health', (_req, res) => {
