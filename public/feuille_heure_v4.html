@@ -498,12 +498,6 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 // ══ CONFIG ══
 var N8N_WEBHOOK_URL = 'https://dsn.srv1740888.hstgr.cloud/feuille-heures';
 
-var PINS = {
-  "TEST": "1234",
-  "MARTIN": "0000",
-  "RUI": "2707"
-};
-
 var JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 var JOURS_COURT = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
 
@@ -540,27 +534,40 @@ function sha256Client(message) {
 }
 
 // ══ PIN ══
-var pinAttempts = 0;
 function validerPIN() {
-  var nom = document.getElementById('pin-nom').value.trim().toUpperCase();
-  var code = document.getElementById('pin-code').value.trim();
+  var nom   = document.getElementById('pin-nom').value.trim().toUpperCase();
+  var code  = document.getElementById('pin-code').value.trim();
   var errEl = document.getElementById('pin-error');
+  var btn   = document.querySelector('.btn.btn-p');
   if (!nom || !code) { errEl.textContent = 'Merci de remplir tous les champs.'; return; }
-  if (PINS[nom] && PINS[nom] === code) {
-    chefNom = nom;
-    document.getElementById('pin-screen').style.display = 'none';
-    document.getElementById('app-main').style.display = 'block';
-    document.getElementById('hdr-ref').textContent = '👷 ' + nom;
-    initialiser();
-  } else {
-    pinAttempts++;
-    if (pinAttempts >= 3) {
+  btn.disabled = true;
+  errEl.textContent = '';
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nom: nom, code: code })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      chefNom = data.nom;
+      document.getElementById('pin-screen').style.display = 'none';
+      document.getElementById('app-main').style.display = 'block';
+      document.getElementById('hdr-ref').textContent = '👷 ' + data.nom;
+      initialiser();
+    } else if (data.blocked) {
       errEl.textContent = 'Trop de tentatives. Contactez votre responsable.';
-      document.querySelectorAll('.pin-field').forEach(function(f){f.disabled=true;});
+      document.querySelectorAll('.pin-field').forEach(function(f) { f.disabled = true; });
     } else {
-      errEl.textContent = 'Nom ou code incorrect. (' + (3-pinAttempts) + ' essai(s) restant)';
+      var restants = data.restants !== undefined ? ' (' + data.restants + ' essai(s) restant)' : '';
+      errEl.textContent = 'Nom ou code incorrect.' + restants;
+      btn.disabled = false;
     }
-  }
+  })
+  .catch(function() {
+    errEl.textContent = 'Erreur de connexion au serveur.';
+    btn.disabled = false;
+  });
 }
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('pin-code').addEventListener('keydown', function(e){ if(e.key==='Enter') validerPIN(); });

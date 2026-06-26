@@ -8,3 +8,4 @@ factures_traitees/
 mapping_entrees/
 mapping_traites/
 .DS_Store
+config/pins.json
