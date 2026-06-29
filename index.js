@@ -95,9 +95,8 @@ app.get('/api/conges', async (_req, res) => {
 
     const LIMIT = 50;
 
-    async function fetchPage(start) {
-      const args = { dateDebut, dateFin, limit: LIMIT, start };
-      logger.info(`[congés] fetchPage start=${start} args=${JSON.stringify(args)}`);
+    // Helper SSE parser + appel MCP générique
+    async function callMcp(args) {
       const response = await fetch('https://srv1740888.hstgr.cloud/mcp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
@@ -108,17 +107,19 @@ app.get('/api/conges', async (_req, res) => {
         })
       });
       const text = await response.text();
-      logger.info(`[congés] texte complet start=${start} : ${text}`);
-
-      // Parser SSE robuste : \r\n ou \n, data: avec ou sans espace
-      const lines = text.split(/\r?\n/);
-      const dataLines = lines
+      const dataLines = text.split(/\r?\n/)
         .filter(l => /^data:/.test(l))
         .map(l => l.replace(/^data:\s*/, ''));
       const data = dataLines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
       const result = data.find(d => d.result)?.result;
       const content = result?.content?.[0]?.text;
       return content ? JSON.parse(content) : {};
+    }
+
+    async function fetchPage(start) {
+      const args = { dateDebut, dateFin, limit: LIMIT, start };
+      logger.info(`[congés] fetchPage start=${start} args=${JSON.stringify(args)}`);
+      return callMcp(args);
     }
 
     let start = 0;
@@ -134,8 +135,27 @@ app.get('/api/conges', async (_req, res) => {
       start += LIMIT;
     } while (start < totalSize);
 
-    logger.info('[congés] total agrégé : ' + allResults.length);
+    // Déduplication par id (la dernière page Eurecia chevauche la précédente)
+    allResults = [...new Map(allResults.map(r => [r.id, r])).values()];
+    logger.info('[congés] total après déduplication : ' + allResults.length);
     logger.info('[congés] statuts uniques : ' + JSON.stringify([...new Set(allResults.map(r => r.status))]));
+
+    // Diagnostic : teste 3 variantes de paramètre statut pour trouver les demandes en attente
+    const statusTests = [
+      { statut: 'SENT' },
+      { states: 'SENT,ACCEPTED,REJECTED' },
+      { status: 'WAITING' },
+    ];
+    for (const extra of statusTests) {
+      try {
+        const page = await callMcp({ dateDebut, dateFin, ...extra });
+        const results = page.results || [];
+        const statuts = [...new Set(results.map(r => r.status))];
+        logger.info(`[congés-diag] args=${JSON.stringify(extra)} → ${results.length} résultats, statuts: ${JSON.stringify(statuts)}`);
+      } catch (e) {
+        logger.info(`[congés-diag] args=${JSON.stringify(extra)} → erreur: ${e.message}`);
+      }
+    }
 
     const formatted = allResults.map(a => ({
       nom: a._embedded?.user?.fullName || a.fullName || '',
