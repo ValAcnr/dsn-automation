@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { appendRow, replaceSheet, getSheetData, readWorkbook } = require('./excel');
 const calcul = require('./calcul-controles');
 const logger = require('./logger');
@@ -29,7 +28,7 @@ function safeFilePart(str) {
 }
 
 function normStr(s) {
-  return String(s || '').toUpperCase().trim()
+  return String(s || '').toLowerCase().trim()
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
@@ -59,16 +58,7 @@ async function handleFeuille(req, res) {
     const semaine = data.semaine || '';
     const numSem = parseNumSemaine(semaine);
 
-    // Verify SHA-256 hash when both are provided
-    if (data.hash_sha256 && data.pdf_base64) {
-      const computed = crypto
-        .createHash('sha256')
-        .update(Buffer.from(data.pdf_base64, 'base64'))
-        .digest('hex');
-      if (computed !== data.hash_sha256) {
-        logger.warn(`Hash SHA-256 invalide pour ${nom} ${prenom} sem.${numSem}`);
-      }
-    }
+    // hash_sha256 est un hash des métadonnées client (non vérifié côté serveur — stocké tel quel dans Excel)
 
     // Detailed PDF diagnostics
     const hasPdf = !!(data.pdf_base64);
