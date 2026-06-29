@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Congés — DSN</title>
+  <script src="/app/layout.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1a2f5a; --navy-light: #243f7a;
+      --white: #fff;
+      --gray-50: #f8fafc; --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0; --gray-400: #94a3b8;
+      --gray-600: #475569; --gray-800: #1e293b;
+      --green: #16a34a; --green-bg: #f0fdf4;
+      --orange: #c2570b; --orange-bg: #fff7ed;
+      --gray-muted: #64748b;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50); color: var(--gray-800); min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--navy); color: #fff;
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: var(--shadow); position: sticky; top: 0; z-index: 50;
+    }
+    .header-title { font-size: 16px; font-weight: 700; }
+    .header-meta  { font-size: 12px; opacity: .6; }
+
+    /* Main */
+    .main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 2px solid var(--gray-200); }
+    .tab {
+      padding: 10px 20px; border: none; background: transparent;
+      font-size: 13px; font-weight: 600; color: var(--gray-600);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; font-family: inherit;
+      transition: color .15s, border-color .15s;
+    }
+    .tab:hover   { color: var(--navy); }
+    .tab.active  { color: var(--navy); border-bottom-color: var(--navy); }
+
+    /* Table */
+    .table-wrapper {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow-x: auto;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--gray-50); border-bottom: 2px solid var(--gray-200); }
+    th {
+      padding: 11px 16px; text-align: left; font-weight: 600;
+      color: var(--gray-600); font-size: 11px;
+      text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+    }
+    td { padding: 13px 16px; border-bottom: 1px solid var(--gray-100); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f0f4ff; }
+
+    .name-cell { font-weight: 500; }
+
+    /* Badges statut */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; letter-spacing: .3px;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    .badge::before {
+      content: ''; width: 6px; height: 6px;
+      border-radius: 50%; background: currentColor; flex-shrink: 0;
+    }
+    .badge-attente { background: var(--orange-bg); color: var(--orange); }
+    .badge-valide  { background: var(--green-bg);  color: var(--green); }
+    .badge-annule  { background: var(--gray-100);  color: var(--gray-muted); }
+
+    /* Empty / loading */
+    .placeholder { text-align: center; padding: 60px 20px; color: var(--gray-400); font-size: 14px; }
+    .placeholder strong { display: block; font-size: 16px; margin-bottom: 6px; color: var(--gray-600); }
+
+    /* Refresh info */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .section-title { font-size: 15px; font-weight: 600; }
+    .refresh-btn {
+      padding: 7px 14px; border-radius: var(--radius);
+      border: 1px solid var(--gray-200); background: var(--white);
+      font-size: 12px; font-weight: 600; color: var(--gray-600);
+      cursor: pointer; font-family: inherit; transition: background .15s;
+    }
+    .refresh-btn:hover { background: var(--gray-100); }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">Gestion des congés</div>
+  <div class="header-meta" id="last-update"></div>
+</header>
+
+<main class="main">
+
+  <div class="toolbar">
+    <div class="section-title">Absences &amp; congés — mois en cours + 3 mois</div>
+    <button class="refresh-btn" onclick="load()">&#8635; Actualiser</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-attente" onclick="setTab('attente')">En attente</button>
+    <button class="tab"        id="tab-valide"  onclick="setTab('valide')">Validés</button>
+  </div>
+
+  <div class="table-wrapper">
+    <div id="container" class="placeholder">Chargement…</div>
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+let absences = [];
+let activeTab = 'attente';
+
+function setTab(t) {
+  activeTab = t;
+  document.getElementById('tab-attente').classList.toggle('active', t === 'attente');
+  document.getElementById('tab-valide').classList.toggle('active',  t === 'valide');
+  render();
+}
+
+function statutClass(s) {
+  const v = String(s || '').toUpperCase();
+  if (v.includes('ATTENTE') || v.includes('PENDING') || v.includes('SOUMIS')) return 'badge-attente';
+  if (v.includes('VALID') || v.includes('APPROV'))  return 'badge-valide';
+  return 'badge-annule';
+}
+
+function isTab(s, tab) {
+  const v = String(s || '').toUpperCase();
+  if (tab === 'attente') return v.includes('ATTENTE') || v.includes('PENDING') || v.includes('SOUMIS');
+  if (tab === 'valide')  return v.includes('VALID') || v.includes('APPROV');
+  return false;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmt(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt)) return esc(d);
+  return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function employeNom(r) {
+  const s = r.salarie || r.employe || r.employee || {};
+  const nom    = s.nom    || s.lastName  || r.nom    || '';
+  const prenom = s.prenom || s.firstName || r.prenom || '';
+  if (nom || prenom) return esc(`${prenom} ${nom}`.trim());
+  return esc(s.nomComplet || s.fullName || r.nomComplet || '—');
+}
+
+function render() {
+  const rows = absences.filter(r => {
+    const statut = r.statut || r.etat || r.status || '';
+    return isTab(statut, activeTab);
+  });
+
+  const container = document.getElementById('container');
+  if (!rows.length) {
+    container.innerHTML = `<div class="placeholder"><strong>Aucune absence</strong>Aucun enregistrement pour cet onglet.</div>`;
+    return;
+  }
+
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th>Employé</th><th>Type de congé</th>
+    <th>Date début</th><th>Date fin</th><th>Nb jours</th><th>Statut</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const statut = r.statut || r.etat || r.status || '—';
+    const type   = r.typeAbsence || r.type || r.motif || r.absenceType || '—';
+    const debut  = r.dateDebut  || r.startDate || r.debut || '';
+    const fin    = r.dateFin    || r.endDate   || r.fin   || '';
+    const jours  = r.nbJours    || r.nbJoursOuvrables || r.duree || r.days || '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="name-cell">${employeNom(r)}</td>
+      <td>${esc(type)}</td>
+      <td>${fmt(debut)}</td>
+      <td>${fmt(fin)}</td>
+      <td style="font-variant-numeric:tabular-nums">${esc(String(jours))}</td>
+      <td><span class="badge ${statutClass(statut)}">${esc(statut)}</span></td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbl.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(tbl);
+}
+
+async function load() {
+  document.getElementById('container').innerHTML = '<div class="placeholder">Chargement…</div>';
+  try {
+    const r = await fetch('/api/conges');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    absences = Array.isArray(data) ? data : (data.absences || []);
+    render();
+    document.getElementById('last-update').textContent =
+      'Actualisé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    document.getElementById('container').innerHTML =
+      `<div class="placeholder"><strong>Erreur de chargement</strong>${esc(e.message)}</div>`;
+  }
+}
+
+load();
+setInterval(load, 60_000);
+</script>
+</body>
+</html>

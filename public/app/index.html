@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSN — Connexion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1e3d;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      text-align: center;
+    }
+
+    .logo-mark {
+      width: 56px; height: 56px;
+      background: #1a2f5a;
+      border-radius: 14px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 16px; color: #fff;
+      letter-spacing: -.5px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 20px; font-weight: 700;
+      color: #1a2f5a; margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 13px; color: #64748b; margin-bottom: 32px;
+    }
+
+    label {
+      display: block; text-align: left;
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .5px; color: #64748b; margin-bottom: 8px;
+    }
+
+    input[type="password"] {
+      width: 100%; padding: 13px 16px;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 22px; text-align: center; letter-spacing: 8px;
+      color: #1a2f5a; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      font-family: monospace;
+      margin-bottom: 10px;
+    }
+    input[type="password"]:focus {
+      border-color: #1a2f5a;
+      box-shadow: 0 0 0 3px rgba(26,47,90,.12);
+    }
+
+    .error {
+      font-size: 13px; color: #dc2626;
+      min-height: 20px; margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    button {
+      width: 100%; padding: 14px;
+      background: #1a2f5a; color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background .15s, transform .1s;
+    }
+    button:hover   { background: #243f7a; }
+    button:active  { transform: scale(.98); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-mark">DSN</div>
+  <h1>Espace interne DSN</h1>
+  <p class="subtitle">DSN Transports · AEL Services</p>
+
+  <label for="pin">Code PIN</label>
+  <input type="password" id="pin" maxlength="4" inputmode="numeric"
+         placeholder="••••" autocomplete="current-password">
+  <div class="error" id="error"></div>
+  <button id="btn" onclick="login()">Connexion</button>
+</div>
+
+<script>
+'use strict';
+
+if (sessionStorage.getItem('dsn_app_session')) {
+  window.location.href = '/app/dashboard.html';
+}
+
+const pinEl  = document.getElementById('pin');
+const errEl  = document.getElementById('error');
+const btnEl  = document.getElementById('btn');
+
+pinEl.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+pinEl.addEventListener('input',   () => { errEl.textContent = ''; });
+pinEl.focus();
+
+async function login() {
+  const pin = pinEl.value.trim();
+  if (!pin) { errEl.textContent = 'Saisissez votre code PIN.'; return; }
+
+  btnEl.disabled = true;
+  btnEl.textContent = 'Vérification…';
+  errEl.textContent = '';
+
+  try {
+    const r = await fetch('/api/app-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin }),
+    });
+    const data = await r.json();
+    if (data.success) {
+      sessionStorage.setItem('dsn_app_session', 'ok');
+      window.location.href = '/app/dashboard.html';
+    } else {
+      errEl.textContent = 'Code PIN incorrect.';
+      pinEl.value = '';
+      pinEl.focus();
+    }
+  } catch {
+    errEl.textContent = 'Erreur réseau — réessayez.';
+  } finally {
+    btnEl.disabled = false;
+    btnEl.textContent = 'Connexion';
+  }
+}
+</script>
+</body>
+</html>

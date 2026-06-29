@@ -72,6 +72,51 @@ app.post('/api/login', (req, res) => {
 
 app.post('/feuille-heures', handleFeuille);
 
+const APP_PIN_PATH = path.join(__dirname, 'config', 'app-pin.json');
+
+app.post('/api/app-login', (req, res) => {
+  const pin = String(req.body.pin || '').trim();
+  try {
+    const cfg = JSON.parse(fs.readFileSync(APP_PIN_PATH, 'utf8'));
+    return res.json({ success: pin === String(cfg.pin) });
+  } catch (err) {
+    logger.err(`App login : ${err.message}`);
+    res.status(500).json({ success: false });
+  }
+});
+
+app.get('/api/conges', async (_req, res) => {
+  try {
+    const now = new Date();
+    const y = now.getFullYear(), mo = now.getMonth();
+    const dateDebut = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
+    const fin = new Date(y, mo + 4, 0);
+    const dateFin = `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, '0')}-${String(fin.getDate()).padStart(2, '0')}`;
+
+    const r = await fetch('https://srv1740888.hstgr.cloud/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'tools/call',
+        params: { name: 'get_absences', arguments: { dateDebut, dateFin } },
+      }),
+    });
+    if (!r.ok) throw new Error(`MCP HTTP ${r.status}`);
+    const mcp = await r.json();
+    const raw = mcp?.result?.content?.[0]?.text;
+    let absences = [];
+    if (raw) {
+      try { absences = JSON.parse(raw); } catch { absences = []; }
+    }
+    if (!Array.isArray(absences)) absences = absences.absences || [];
+    res.json(absences);
+  } catch (err) {
+    logger.err(`API congés : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/dashboard', (_req, res) => {
   try {
     const wb = readWorkbook();
