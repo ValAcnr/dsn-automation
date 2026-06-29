@@ -423,10 +423,16 @@ function renderStats() {
     data.controles.filter(r => r.niveau_alerte === 'EN ATTENTE').length;
 }
 
+function parseSem(s) {
+  const str = String(s || '');
+  const m = str.match(/\d{4}[.\-](\d{1,2})/) || str.match(/[Ss](\d{1,2})/) || str.match(/(\d{1,2})/);
+  return m ? m[1].padStart(2, '0') : str;
+}
+
 function filtered() {
   const q = filterSearch.toLowerCase();
   return data.controles.filter(r => {
-    if (filterSemaine && r.semaine !== filterSemaine) return false;
+    if (filterSemaine && parseSem(r.semaine) !== parseSem(filterSemaine)) return false;
     if (q && !(r.nom||'').toLowerCase().includes(q) && !(r.prenom||'').toLowerCase().includes(q)) return false;
     return true;
   });
