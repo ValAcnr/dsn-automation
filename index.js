@@ -87,30 +87,34 @@ app.post('/api/app-login', (req, res) => {
 
 app.get('/api/conges', async (_req, res) => {
   try {
-    const now = new Date();
-    const y = now.getFullYear(), mo = now.getMonth();
-    const dateDebut = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
-    const fin = new Date(y, mo + 4, 0);
-    const dateFin = `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, '0')}-${String(fin.getDate()).padStart(2, '0')}`;
+    const fetch = (await import('node-fetch')).default;
+    const today = new Date();
+    const dateDebut = today.toISOString().split('T')[0];
+    const dateFin = new Date(today.setMonth(today.getMonth() + 4)).toISOString().split('T')[0];
 
-    const r = await fetch('https://srv1740888.hstgr.cloud/mcp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 1,
-        method: 'tools/call',
-        params: { name: 'get_absences', arguments: { dateDebut, dateFin } },
-      }),
-    });
-    if (!r.ok) throw new Error(`MCP HTTP ${r.status}`);
-    const mcp = await r.json();
-    const raw = mcp?.result?.content?.[0]?.text;
-    let absences = [];
-    if (raw) {
-      try { absences = JSON.parse(raw); } catch { absences = []; }
-    }
-    if (!Array.isArray(absences)) absences = absences.absences || [];
-    res.json(absences);
+    const response = await fetch(
+      `https://api.eurecia.com/eurecia/rest/v4/leaveRequests?startDate=${dateDebut}&endDate=${dateFin}&limit=200`,
+      {
+        headers: {
+          'Authorization': 'Bearer it3frlqi8ol3vfglnkvs37ak5r',
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+    const absences = data.results || [];
+
+    const formatted = absences.map(a => ({
+      nom: a._embedded?.user?.fullName || '',
+      type: a.subRequests?.[0]?.typeDescription || '',
+      dateDebut: a.startDate,
+      dateFin: a.endDate,
+      nbJours: a.nbDays,
+      statut: a.status
+    }));
+
+    res.json(formatted);
   } catch (err) {
     logger.err(`API congés : ${err.message}`);
     res.status(500).json({ error: err.message });
