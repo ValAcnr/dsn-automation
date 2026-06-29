@@ -96,16 +96,19 @@ app.get('/api/conges', async (_req, res) => {
     const LIMIT = 50;
 
     async function fetchPage(start) {
+      const args = { dateDebut, dateFin, limit: LIMIT, start };
+      logger.info(`[congés] fetchPage start=${start} args=${JSON.stringify(args)}`);
       const response = await fetch('https://srv1740888.hstgr.cloud/mcp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
         body: JSON.stringify({
           jsonrpc: '2.0', id: 1,
           method: 'tools/call',
-          params: { name: 'get_absences', arguments: { dateDebut, dateFin, limit: LIMIT, start } }
+          params: { name: 'get_absences', arguments: args }
         })
       });
       const text = await response.text();
+      logger.info(`[congés] réponse brute (500 chars) : ${text.slice(0, 500)}`);
       const lines = text.split('\n').filter(l => l.startsWith('data: '));
       const data = lines.map(l => { try { return JSON.parse(l.slice(6)); } catch { return null; } }).filter(Boolean);
       const result = data.find(d => d.result)?.result;
@@ -122,6 +125,7 @@ app.get('/api/conges', async (_req, res) => {
       const results = page.results || [];
       allResults = allResults.concat(results);
       if (totalSize === null) totalSize = page.totalSize ?? results.length;
+      logger.info(`[congés] page start=${start} → ${results.length} résultats, totalSize=${totalSize}`);
       start += LIMIT;
     } while (start < totalSize);
 
