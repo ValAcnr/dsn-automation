@@ -108,8 +108,7 @@ app.get('/api/conges', async (_req, res) => {
         })
       });
       const text = await response.text();
-      logger.info(`[congés] réponse brute (500 chars) start=${start} : ${text.slice(0, 500)}`);
-      if (start === 50) logger.info(`[congés] texte complet start=50 : ${text}`);
+      logger.info(`[congés] texte complet start=${start} : ${text}`);
 
       // Parser SSE robuste : \r\n ou \n, data: avec ou sans espace
       const lines = text.split(/\r?\n/);
