@@ -90,28 +90,41 @@ app.get('/api/conges', async (_req, res) => {
     const fetch = (await import('node-fetch')).default;
     const today = new Date();
     const dateDebut = today.toISOString().split('T')[0];
-    const dateFin = new Date(today.setMonth(today.getMonth() + 4)).toISOString().split('T')[0];
+    const fin = new Date(); fin.setMonth(fin.getMonth() + 4);
+    const dateFin = fin.toISOString().split('T')[0];
 
-    const response = await fetch(
-      `https://api.eurecia.com/eurecia/rest/v4/leaveRequests?startDate=${dateDebut}&endDate=${dateFin}&limit=200`,
-      {
-        headers: {
-          'Authorization': 'Bearer it3frlqi8ol3vfglnkvs37ak5r',
-          'Content-Type': 'application/json'
+    const response = await fetch('http://localhost:3456/mcp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream'
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'get_absences',
+          arguments: { dateDebut, dateFin }
         }
-      }
-    );
+      })
+    });
 
-    const data = await response.json();
-    const absences = data.results || [];
+    const text = await response.text();
+    // Parser SSE ou JSON direct
+    const lines = text.split('\n').filter(l => l.startsWith('data: '));
+    const data = lines.map(l => { try { return JSON.parse(l.slice(6)); } catch { return null; } }).filter(Boolean);
+    const result = data.find(d => d.result)?.result;
+    const content = result?.content?.[0]?.text;
+    const absences = content ? JSON.parse(content) : [];
 
-    const formatted = absences.map(a => ({
-      nom: a._embedded?.user?.fullName || '',
-      type: a.subRequests?.[0]?.typeDescription || '',
-      dateDebut: a.startDate,
-      dateFin: a.endDate,
-      nbJours: a.nbDays,
-      statut: a.status
+    const formatted = (absences.results || absences).map(a => ({
+      nom: a._embedded?.user?.fullName || a.fullName || '',
+      type: a.subRequests?.[0]?.typeDescription || a.type || '',
+      dateDebut: a.startDate || a.dateDebut,
+      dateFin: a.endDate || a.dateFin,
+      nbJours: a.nbDays || a.nbJours,
+      statut: a.status || a.statut
     }));
 
     res.json(formatted);
