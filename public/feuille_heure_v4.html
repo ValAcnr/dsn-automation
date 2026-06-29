@@ -493,6 +493,18 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<!-- MODAL DOUBLON -->
+<div class="modal-overlay hidden" id="modal-doublon-overlay">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--rouge)">Doublon détecté</div>
+    <div class="modal-sub" id="modal-doublon-msg"></div>
+    <div class="btn-row">
+      <button class="btn btn-g" onclick="fermerModalDoublon()">Annuler</button>
+      <button class="btn btn-r" onclick="forcerRemplacement()">Remplacer</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ══ CONFIG ══
@@ -886,6 +898,19 @@ function mettreAJourRecap() {
   }
 }
 
+// ══ MODAL DOUBLON ══
+function afficherModalDoublon(msg) {
+  document.getElementById('modal-doublon-msg').textContent = msg;
+  document.getElementById('modal-doublon-overlay').classList.remove('hidden');
+}
+function fermerModalDoublon() {
+  document.getElementById('modal-doublon-overlay').classList.add('hidden');
+}
+function forcerRemplacement() {
+  fermerModalDoublon();
+  if (window._doublonRetry) window._doublonRetry();
+}
+
 // ══ ENVOI ══
 function ouvrirModalEnvoi() {
   var nom = document.getElementById('nom').value.trim();
@@ -980,19 +1005,24 @@ function envoyerSemaine() {
     .then(function(r) {
       console.log('[DSN] Réponse serveur — status HTTP:', r.status);
       if (!r.ok) throw new Error('Erreur serveur HTTP ' + r.status);
-      return r.text().then(function(txt) {
-        console.log('[DSN] Réponse serveur — body:', txt.slice(0, 300));
-        var lienPdf = '';
-        try { lienPdf = JSON.parse(txt).lien_pdf || ''; } catch(e) {
-          console.warn('[DSN] Impossible de parser la réponse JSON:', e.message);
-        }
-        return lienPdf;
-      });
+      return r.json();
     })
-    .then(function(lienPdf) {
+    .then(function(data) {
+      console.log('[DSN] Réponse serveur — status:', data.status);
+      if (data.status === 'doublon') {
+        st.className = '';
+        st.textContent = '';
+        window._doublonRetry = function() {
+          payload.forcer = true;
+          doEnvoi(pdfB64);
+        };
+        afficherModalDoublon(data.message);
+        return;
+      }
+      var lienPdf = data.lien_pdf || '';
       console.log('[DSN] lien_pdf reçu du serveur:', lienPdf || '(vide)');
       st.className = 'send-ok';
-      st.textContent = '✓ Fiche envoyée avec succès';
+      st.textContent = data.remplace ? '✓ Fiche remplacée avec succès' : '✓ Fiche envoyée avec succès';
       try { localStorage.removeItem(getCleStorage()); } catch(e){}
       setTimeout(function() { afficherConfirmation(payload, lienPdf); }, 500);
     })

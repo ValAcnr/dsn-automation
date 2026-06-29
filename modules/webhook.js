@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { appendRow } = require('./excel');
+const { appendRow, replaceSheet, getSheetData, readWorkbook } = require('./excel');
 const calcul = require('./calcul-controles');
 const logger = require('./logger');
 
@@ -26,6 +26,11 @@ function parseNumSemaine(semaine) {
 
 function safeFilePart(str) {
   return (str || '').toUpperCase().trim().replace(/[^A-Z0-9]/gi, '_').replace(/_+/g, '_');
+}
+
+function normStr(s) {
+  return String(s || '').toUpperCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 function nettoyerAnciensPdfs() {
@@ -141,6 +146,49 @@ async function handleFeuille(req, res) {
       hash_sha256:    data.hash_sha256   || '',
       timestamp_date: now.toISOString(),
     };
+
+    // Détection doublon : même nom + prenom + semaine
+    const existingRows = getSheetData(readWorkbook(), 'Feuilles');
+    const nomNorm = normStr(nom);
+    const prenomNorm = normStr(prenom);
+    const doublonIdx = existingRows.findIndex((r) =>
+      normStr(r.nom) === nomNorm &&
+      normStr(r.prenom) === prenomNorm &&
+      parseNumSemaine(r.semaine) === numSem
+    );
+
+    if (doublonIdx !== -1 && !data.forcer) {
+      // Supprimer le PDF qu'on vient d'écrire (doublon refusé)
+      if (lienPdf) {
+        try { fs.unlinkSync(path.join(__dirname, '..', lienPdf.replace(/^\.\//, ''))); } catch (_) {}
+      }
+      return res.json({
+        status: 'doublon',
+        message: `Une fiche existe déjà pour ${nom} ${prenom} semaine ${numSem}. Voulez-vous la remplacer ?`,
+      });
+    }
+
+    if (doublonIdx !== -1) {
+      // forcer: true → supprimer l'ancien PDF et remplacer la ligne
+      const ancienLien = existingRows[doublonIdx].lien_pdf;
+      if (ancienLien) {
+        try {
+          const ancienPath = path.join(__dirname, '..', ancienLien.replace(/^\.\//, ''));
+          if (fs.existsSync(ancienPath)) {
+            fs.unlinkSync(ancienPath);
+            logger.info(`Ancien PDF remplacé supprimé : ${ancienPath}`);
+          }
+        } catch (e) {
+          logger.warn(`Suppression ancien PDF : ${e.message}`);
+        }
+      }
+      const newRows = existingRows.map((r, i) => (i === doublonIdx ? row : r));
+      await replaceSheet('Feuilles', newRows);
+      await calcul.recalculer();
+      nettoyerAnciensPdfs();
+      logger.ok(`Feuille ${nom} ${prenom} sem.${numSem} REMPLACÉE`);
+      return res.json({ status: 'ok', remplace: true, lien_pdf: lienPdf });
+    }
 
     await appendRow('Feuilles', row);
     await calcul.recalculer();
