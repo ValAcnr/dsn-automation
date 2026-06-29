@@ -93,7 +93,7 @@ app.get('/api/conges', async (_req, res) => {
     const fin = new Date(); fin.setMonth(fin.getMonth() + 4);
     const dateFin = fin.toISOString().split('T')[0];
 
-    const response = await fetch('http://localhost:3456/mcp', {
+    const response = await fetch('https://srv1740888.hstgr.cloud/mcp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
