@@ -108,9 +108,15 @@ app.get('/api/conges', async (_req, res) => {
         })
       });
       const text = await response.text();
-      logger.info(`[congés] réponse brute (500 chars) : ${text.slice(0, 500)}`);
-      const lines = text.split('\n').filter(l => l.startsWith('data: '));
-      const data = lines.map(l => { try { return JSON.parse(l.slice(6)); } catch { return null; } }).filter(Boolean);
+      logger.info(`[congés] réponse brute (500 chars) start=${start} : ${text.slice(0, 500)}`);
+      if (start === 50) logger.info(`[congés] texte complet start=50 : ${text}`);
+
+      // Parser SSE robuste : \r\n ou \n, data: avec ou sans espace
+      const lines = text.split(/\r?\n/);
+      const dataLines = lines
+        .filter(l => /^data:/.test(l))
+        .map(l => l.replace(/^data:\s*/, ''));
+      const data = dataLines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
       const result = data.find(d => d.result)?.result;
       const content = result?.content?.[0]?.text;
       return content ? JSON.parse(content) : {};
