@@ -90,7 +90,7 @@ app.get('/api/conges', async (_req, res) => {
     const fetch = (await import('node-fetch')).default;
     const today = new Date();
     const dateDebut = today.toISOString().split('T')[0];
-    const fin = new Date(); fin.setMonth(fin.getMonth() + 4);
+    const fin = new Date(); fin.setMonth(fin.getMonth() + 5);
     const dateFin = fin.toISOString().split('T')[0];
 
     const response = await fetch('https://srv1740888.hstgr.cloud/mcp', {
