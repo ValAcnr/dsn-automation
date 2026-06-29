@@ -134,6 +134,9 @@ app.get('/api/conges', async (_req, res) => {
       start += LIMIT;
     } while (start < totalSize);
 
+    logger.info('[congés] total agrégé : ' + allResults.length);
+    logger.info('[congés] statuts uniques : ' + JSON.stringify([...new Set(allResults.map(r => r.status))]));
+
     const formatted = allResults.map(a => ({
       nom: a._embedded?.user?.fullName || a.fullName || '',
       type: a.subRequests?.[0]?.typeDescription || a.type || '',
