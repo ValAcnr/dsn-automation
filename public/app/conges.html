@@ -142,17 +142,30 @@ function setTab(t) {
   render();
 }
 
+const STATUT_FR = {
+  'SENT':                        'En attente de validation',
+  'PENDING':                     'En attente de validation',
+  'ACCEPTED':                    'Validé',
+  'REJECTED':                    'Refusé',
+  'CANCELED':                    'Annulé',
+  'CANCELED_BEFORE_VALIDATION':  'Annulé avant validation',
+};
+
+function statutFr(s) {
+  return STATUT_FR[String(s || '').toUpperCase()] || s || '—';
+}
+
 function statutClass(s) {
   const v = String(s || '').toUpperCase();
-  if (v.includes('ATTENTE') || v.includes('PENDING') || v.includes('SOUMIS')) return 'badge-attente';
-  if (v.includes('VALID') || v.includes('APPROV'))  return 'badge-valide';
+  if (v === 'SENT' || v === 'PENDING') return 'badge-attente';
+  if (v === 'ACCEPTED')                return 'badge-valide';
   return 'badge-annule';
 }
 
 function isTab(s, tab) {
   const v = String(s || '').toUpperCase();
-  if (tab === 'attente') return v.includes('ATTENTE') || v.includes('PENDING') || v.includes('SOUMIS');
-  if (tab === 'valide')  return v.includes('VALID') || v.includes('APPROV');
+  if (tab === 'attente') return v === 'SENT' || v === 'PENDING';
+  if (tab === 'valide')  return v === 'ACCEPTED';
   return false;
 }
 
@@ -208,7 +221,7 @@ function render() {
       <td>${fmt(debut)}</td>
       <td>${fmt(fin)}</td>
       <td style="font-variant-numeric:tabular-nums">${esc(String(jours))}</td>
-      <td><span class="badge ${statutClass(statut)}">${esc(statut)}</span></td>`;
+      <td><span class="badge ${statutClass(statut)}">${esc(statutFr(statut))}</span></td>`;
     tbody.appendChild(tr);
   });
 
