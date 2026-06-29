@@ -93,32 +93,39 @@ app.get('/api/conges', async (_req, res) => {
     const fin = new Date(); fin.setMonth(fin.getMonth() + 5);
     const dateFin = fin.toISOString().split('T')[0];
 
-    const response = await fetch('https://srv1740888.hstgr.cloud/mcp', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream'
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/call',
-        params: {
-          name: 'get_absences',
-          arguments: { dateDebut, dateFin }
-        }
-      })
-    });
+    const LIMIT = 50;
 
-    const text = await response.text();
-    // Parser SSE ou JSON direct
-    const lines = text.split('\n').filter(l => l.startsWith('data: '));
-    const data = lines.map(l => { try { return JSON.parse(l.slice(6)); } catch { return null; } }).filter(Boolean);
-    const result = data.find(d => d.result)?.result;
-    const content = result?.content?.[0]?.text;
-    const absences = content ? JSON.parse(content) : [];
+    async function fetchPage(start) {
+      const response = await fetch('https://srv1740888.hstgr.cloud/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 1,
+          method: 'tools/call',
+          params: { name: 'get_absences', arguments: { dateDebut, dateFin, limit: LIMIT, start } }
+        })
+      });
+      const text = await response.text();
+      const lines = text.split('\n').filter(l => l.startsWith('data: '));
+      const data = lines.map(l => { try { return JSON.parse(l.slice(6)); } catch { return null; } }).filter(Boolean);
+      const result = data.find(d => d.result)?.result;
+      const content = result?.content?.[0]?.text;
+      return content ? JSON.parse(content) : {};
+    }
 
-    const formatted = (absences.results || absences).map(a => ({
+    let start = 0;
+    let totalSize = null;
+    let allResults = [];
+
+    do {
+      const page = await fetchPage(start);
+      const results = page.results || [];
+      allResults = allResults.concat(results);
+      if (totalSize === null) totalSize = page.totalSize ?? results.length;
+      start += LIMIT;
+    } while (start < totalSize);
+
+    const formatted = allResults.map(a => ({
       nom: a._embedded?.user?.fullName || a.fullName || '',
       type: a.subRequests?.[0]?.typeDescription || a.type || '',
       dateDebut: a.startDate || a.dateDebut,
