@@ -137,25 +137,6 @@ app.get('/api/conges', async (_req, res) => {
 
     // Déduplication par id (la dernière page Eurecia chevauche la précédente)
     allResults = [...new Map(allResults.map(r => [r.id, r])).values()];
-    logger.info('[congés] total après déduplication : ' + allResults.length);
-    logger.info('[congés] statuts uniques : ' + JSON.stringify([...new Set(allResults.map(r => r.status))]));
-
-    // Diagnostic : teste 3 variantes de paramètre statut pour trouver les demandes en attente
-    const statusTests = [
-      { statut: 'SENT' },
-      { states: 'SENT,ACCEPTED,REJECTED' },
-      { status: 'WAITING' },
-    ];
-    for (const extra of statusTests) {
-      try {
-        const page = await callMcp({ dateDebut, dateFin, ...extra });
-        const results = page.results || [];
-        const statuts = [...new Set(results.map(r => r.status))];
-        logger.info(`[congés-diag] args=${JSON.stringify(extra)} → ${results.length} résultats, statuts: ${JSON.stringify(statuts)}`);
-      } catch (e) {
-        logger.info(`[congés-diag] args=${JSON.stringify(extra)} → erreur: ${e.message}`);
-      }
-    }
 
     const formatted = allResults.map(a => ({
       nom: a._embedded?.user?.fullName || a.fullName || '',
