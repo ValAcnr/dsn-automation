@@ -157,6 +157,10 @@ app.get('/api/conges', async (_req, res) => {
       statut: a.status || a.statut
     }));
 
+    // LOG TEMPORAIRE — statuts bruts API (r.status) et statuts formatés (r.statut)
+    logger.info('[congés] par statut brut (r.status) : ' + JSON.stringify(allResults.reduce((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc; }, {})));
+    logger.info('[congés] par statut formaté (r.statut) : ' + JSON.stringify(formatted.reduce((acc, r) => { acc[r.statut] = (acc[r.statut] || 0) + 1; return acc; }, {})));
+
     res.json(formatted);
   } catch (err) {
     logger.err(`API congés : ${err.message}`);
