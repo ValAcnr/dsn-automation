@@ -62,8 +62,23 @@ async function getToken(fetch) {
   throw new Error('Impossible d\'obtenir un token OAuth2');
 }
 
+const RATE_LIMIT_DELAY_MS = 2100;   // 30 req/min → 1 req/2 s, +100 ms de marge
+const RETRY_429_DELAY_MS  = 65000;  // attente après 429 (fenêtre 1 min + marge)
+
 async function apiGet(fetch, url, headers) {
-  const r = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+  const doFetch = () => fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+
+  let r = await doFetch();
+
+  if (r.status === 429) {
+    console.warn(`[sync-mapping] ⏳ 429 Rate Limit sur ${url.split('?')[0]} — attente ${RETRY_429_DELAY_MS / 1000} s…`);
+    await sleep(RETRY_429_DELAY_MS);
+    r = await doFetch();
+    if (r.status === 429) {
+      throw new Error(`HTTP 429 persistant après retry : ${url}`);
+    }
+  }
+
   if (!r.ok) {
     const body = await r.text();
     throw new Error(`HTTP ${r.status} ${url} — ${body.slice(0, 200)}`);
@@ -107,6 +122,8 @@ async function main() {
     return st !== 'OUT_FLEET' && st !== 'OUT OF FLEET';
   });
   console.log(`[sync-mapping] ${allVehicles.length} véhicules au total, ${active.length} actifs.`);
+  const estMinutes = Math.ceil(active.length * RATE_LIMIT_DELAY_MS / 60000);
+  console.log(`[sync-mapping] Durée estimée : ${active.length} × ${RATE_LIMIT_DELAY_MS / 1000} s ≈ ${estMinutes} min (rate limit 30 req/min)`);
 
   // ── Trajets par véhicule ─────────────────────────────────────────────────
   // Accumule : { driverRegistrationNumber → { driverName, totalSeconds, trips } }
@@ -166,7 +183,7 @@ async function main() {
       }
     }
 
-    await sleep(100);
+    await sleep(RATE_LIMIT_DELAY_MS);
   }
 
   // ── Construction du payload de la journée ────────────────────────────────
