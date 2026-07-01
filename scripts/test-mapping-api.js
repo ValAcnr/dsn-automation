@@ -19,9 +19,6 @@ const CLIENT_ID     = process.env.MAPPING_CLIENT_ID;
 const CLIENT_SECRET = process.env.MAPPING_CLIENT_SECRET;
 const BASE_API      = 'https://apicore-preprod.optimum-automotive.com';
 
-// Véhicule cible pour les tests unitaires
-const REG = 'EW-266-YQ';
-
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error('❌ MAPPING_CLIENT_ID / MAPPING_CLIENT_SECRET manquants dans .env');
   process.exit(1);
@@ -76,8 +73,7 @@ async function main() {
 
   console.log('DSN TRANSPORTS — Exploration API Mapping Control (Optimum Automotive)');
   console.log(`CLIENT_ID : ${CLIENT_ID}`);
-  console.log(`BASE_API  : ${BASE_API}`);
-  console.log(`Véhicule cible : ${REG}\n`);
+  console.log(`BASE_API  : ${BASE_API}\n`);
 
   // 1. Obtenir le token OAuth2 ───────────────────────────────────────────────
   sep('1. AUTHENTIFICATION OAuth2 client_credentials');
@@ -160,11 +156,66 @@ async function main() {
     }
   }
 
-  // 3. VehicleAssignments/current (avec registrationNumber) ─────────────────
-  sep(`3. GET /VehicleAssignments/current?registrationNumber=${REG}`);
+  // 3. Liste véhicules → trouver un véhicule actif ──────────────────────────
+  sep('3. GET /Vehicles — filtrer les véhicules actifs (status !== OUT_FLEET)');
+
+  let activeReg = null;
 
   {
-    const url = `${BASE_API}/VehicleAssignments/current?registrationNumber=${encodeURIComponent(REG)}`;
+    const url = `${BASE_API}/Vehicles`;
+    process.stdout.write(`[GET] ${url} → `);
+    const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
+    if (err) {
+      console.log(`ERREUR : ${err}`);
+    } else {
+      console.log(`HTTP ${status}`);
+      if (ok) {
+        try {
+          const data  = JSON.parse(raw);
+          const all   = Array.isArray(data) ? data : (data.items || data.results || data.data || data.vehicles || [data]);
+          const active = all.filter(v => {
+            const st = (v.status || v.fleetStatus || v.vehicleStatus || '').toString().toUpperCase();
+            return st !== 'OUT_FLEET' && st !== 'OUT OF FLEET';
+          });
+          console.log(`\n✅ ${all.length} véhicules au total, ${active.length} actifs (hors OUT_FLEET)`);
+          console.log('\n--- 3 premiers véhicules actifs ---');
+          active.slice(0, 3).forEach((v, i) => {
+            const reg = v.registrationNumber || v.plate || v.immatriculation || v.id || '(?)';
+            const driver = v.currentDriver
+              ? JSON.stringify(v.currentDriver)
+              : (v.driverName || v.driver || v.driverId || '(null)');
+            const st = v.status || v.fleetStatus || '(no status field)';
+            console.log(`   ${i + 1}. ${reg}  |  status: ${st}  |  currentDriver: ${driver}`);
+          });
+          if (active.length > 0) {
+            activeReg = active[0].registrationNumber || active[0].plate || active[0].immatriculation || String(active[0].id);
+            console.log(`\n   → Véhicule actif retenu pour les tests : ${activeReg}`);
+          } else {
+            console.log('\n⚠️  Aucun véhicule actif trouvé — affichage des 3 premiers sans filtre :');
+            all.slice(0, 3).forEach((v, i) => {
+              console.log(`   ${i + 1}.`, JSON.stringify(v, null, 2));
+            });
+          }
+        } catch {
+          console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
+        }
+      } else {
+        console.log(`   ${raw.slice(0, 400)}`);
+      }
+    }
+  }
+
+  if (!activeReg) {
+    console.log('\n⚠️  Impossible de déterminer un véhicule actif. Les étapes suivantes seront skippées.');
+  }
+
+  // 4. VehicleAssignments/current (avec registrationNumber actif) ────────────
+  sep(`4. GET /VehicleAssignments/current?registrationNumber=${activeReg || '(inconnu)'}`);
+
+  {
+    if (!activeReg) { console.log('   (skippé — pas de véhicule actif)'); }
+    else {
+    const url = `${BASE_API}/VehicleAssignments/current?registrationNumber=${encodeURIComponent(activeReg)}`;
     process.stdout.write(`[GET] ${url} → `);
     const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
     if (err) {
@@ -210,10 +261,11 @@ async function main() {
         }
       }
     }
+    } // fin if (activeReg)
   }
 
-  // 4. Persons ───────────────────────────────────────────────────────────────
-  sep('4. GET /Persons');
+  // 5. Persons ───────────────────────────────────────────────────────────────
+  sep('5. GET /Persons');
 
   {
     const url = `${BASE_API}/Persons`;
@@ -241,11 +293,13 @@ async function main() {
     }
   }
 
-  // 5. Vehicles/{registrationNumber} ─────────────────────────────────────────
-  sep(`5. GET /Vehicles/${REG} — fiche véhicule individuelle`);
+  // 6. Vehicles/{registrationNumber} ─────────────────────────────────────────
+  sep(`6. GET /Vehicles/${activeReg || '(inconnu)'} — fiche véhicule individuelle`);
 
   {
-    const url = `${BASE_API}/Vehicles/${encodeURIComponent(REG)}`;
+    if (!activeReg) { console.log('   (skippé — pas de véhicule actif)'); }
+    else {
+    const url = `${BASE_API}/Vehicles/${encodeURIComponent(activeReg)}`;
     process.stdout.write(`[GET] ${url} → `);
     const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
     if (err) {
@@ -263,11 +317,10 @@ async function main() {
         }
       } else {
         console.log(`   ${raw.slice(0, 400)}`);
-        // Essai avec le registrationNumber en query param au lieu de path param
-        console.log(`\n   → Tentative en query param : /Vehicles?registrationNumber=${REG}`);
+        console.log(`\n   → Tentative en query param : /Vehicles?registrationNumber=${activeReg}`);
         const { ok: ok2, status: s2, raw: r2, err: e2 } = await tryGet(
           fetch,
-          `${BASE_API}/Vehicles?registrationNumber=${encodeURIComponent(REG)}`,
+          `${BASE_API}/Vehicles?registrationNumber=${encodeURIComponent(activeReg)}`,
           authHeaders
         );
         if (e2) { console.log(`   ERREUR : ${e2}`); }
@@ -276,10 +329,11 @@ async function main() {
         }
       }
     }
+    } // fin if (activeReg)
   }
 
-  // 6. Geolocation/Trips — 24h max, hier, ciblé sur EW-266-YQ ──────────────
-  sep(`6. GET /Geolocation/Trips — hier, registrationNumber=${REG}`);
+  // 7. Geolocation/Trips — 24h max, hier, ciblé sur le véhicule actif ────────
+  sep(`7. GET /Geolocation/Trips — hier, registrationNumber=${activeReg || '(inconnu)'}`);
 
   {
     // Hier 00:00:00 → aujourd'hui 00:00:00 (fenêtre 24h exacte)
@@ -291,15 +345,17 @@ async function main() {
                         .toISOString().replace(/\.\d{3}Z$/, '');
 
     console.log(`   Fenêtre : ${startDate} → ${endDate}`);
+    if (!activeReg) { console.log('   (skippé — pas de véhicule actif)'); return; }
 
+    const regEnc = encodeURIComponent(activeReg);
     // Variantes de params dans l'ordre de probabilité pour cette API
     const paramVariants = [
-      `startDate=${startDate}&endDate=${endDate}&registrationNumber=${encodeURIComponent(REG)}`,
+      `startDate=${startDate}&endDate=${endDate}&registrationNumber=${regEnc}`,
       `startDate=${startDate}&endDate=${endDate}`,
-      `from=${startDate}&to=${endDate}&registrationNumber=${encodeURIComponent(REG)}`,
+      `from=${startDate}&to=${endDate}&registrationNumber=${regEnc}`,
       `from=${startDate}&to=${endDate}`,
       // Dates seules (format YYYY-MM-DD) au cas où l'API rejette les datetimes complets
-      `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}&registrationNumber=${encodeURIComponent(REG)}`,
+      `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}&registrationNumber=${regEnc}`,
       `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}`,
     ];
 
