@@ -26,7 +26,8 @@ function parseNumSemaine(semaine) {
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/pdfs', express.static(path.join(__dirname, 'pdfs')));
+app.use('/pdfs',       express.static(path.join(__dirname, 'pdfs')));
+app.use('/signatures', express.static(path.join(__dirname, 'signatures')));
 
 // Allow fetch from file:// (Origin: null) and any local origin
 app.use((req, res, next) => {
@@ -311,6 +312,37 @@ app.post('/api/controle-vehicule', async (req, res) => {
 });
 
 const VEHICULES_XLSX = path.join(__dirname, 'controle_vehicules.xlsx');
+
+app.get('/api/controle-vehicule/liste', (_req, res) => {
+  try {
+    res.json(excelVehicules.getAll());
+  } catch (err) {
+    logger.err(`GET /api/controle-vehicule/liste : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/controle-vehicule', async (req, res) => {
+  try {
+    const { sig_responsable, sig_conducteur, date, immatriculation, conducteur } = req.body || {};
+    const removed = await excelVehicules.removeRow({ sig_responsable, sig_conducteur, date, immatriculation, conducteur });
+    if (!removed) return res.status(404).json({ error: 'Entrée introuvable' });
+    const delPng = p => {
+      if (!p) return;
+      try {
+        const abs = path.join(__dirname, String(p).replace(/^\.\//, ''));
+        if (fs.existsSync(abs)) fs.unlinkSync(abs);
+      } catch (e) { logger.warn(`Suppression PNG véhicule : ${e.message}`); }
+    };
+    delPng(removed.sig_responsable);
+    delPng(removed.sig_conducteur);
+    logger.ok(`Contrôle véhicule supprimé : ${removed.immatriculation} / ${removed.conducteur}`);
+    res.json({ status: 'ok' });
+  } catch (err) {
+    logger.err(`DELETE /api/controle-vehicule : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/api/controle-vehicule/export', (req, res) => {
   if (!fs.existsSync(VEHICULES_XLSX)) {

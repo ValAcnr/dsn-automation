@@ -167,6 +167,9 @@
     .badge-attention{ background: var(--orange-bg); color: #c2570b; }
     .badge-critique { background: var(--red-bg);    color: #dc2626; }
     .badge-mois     { background: #dbeafe; color: #1d4ed8; }
+    .badge-sangle   { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:.3px; }
+    .badge-sangle.oui { background: var(--green-bg); color: #16a34a; }
+    .badge-sangle.non { background: var(--gray-100);  color: var(--gray-600); }
 
     /* ── Empty / loading ────────────────────────────── */
     .placeholder { text-align: center; padding: 60px 20px; color: var(--gray-400); font-size: 14px; }
@@ -333,12 +336,24 @@
     <div id="table-container" class="placeholder">Chargement…</div>
   </div>
 
+  <!-- Contrôles véhicules -->
+  <div class="pdfs-section" style="margin-top:24px">
+    <div class="toolbar">
+      <div class="section-title">Contrôles véhicules</div>
+      <div class="toolbar-right">
+        <a href="/api/controle-vehicule/export" class="btn btn-ghost">&#128202; Export XLSX</a>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <div id="vehicules-container" class="placeholder">Chargement…</div>
+    </div>
+  </div>
+
   <!-- Feuilles d'heures -->
   <div class="pdfs-section" style="margin-top:24px">
     <div class="toolbar">
       <div class="section-title">Feuilles d'heures</div>
       <div class="toolbar-right">
-        <a href="/api/controle-vehicule/export" class="btn btn-ghost">&#128202; Contrôles véhicules (XLSX)</a>
         <a href="/api/pdfs/zip" class="btn btn-ghost">&#128230; Télécharger tout (ZIP)</a>
       </div>
     </div>
@@ -671,6 +686,80 @@ function renderFeuilles() {
   container.appendChild(tbl);
 }
 
+/* ── Contrôles véhicules ───────────────────────────── */
+async function loadVehicules() {
+  try {
+    const r = await fetch('/api/controle-vehicule/liste');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    renderVehicules(await r.json());
+  } catch (e) {
+    document.getElementById('vehicules-container').innerHTML =
+      `<div class="placeholder"><strong>Erreur</strong>${e.message}</div>`;
+  }
+}
+
+function renderVehicules(rows) {
+  const container = document.getElementById('vehicules-container');
+  if (!rows.length) {
+    container.innerHTML = '<div class="placeholder"><strong>Aucun contrôle</strong>Aucun enregistrement disponible.</div>';
+    return;
+  }
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th>Immatriculation</th><th>Conducteur</th><th>Sangle</th><th>Date</th><th>Signatures</th><th></th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const sangleBadge = r.sangle === 'Oui'
+      ? '<span class="badge-sangle oui">Oui</span>'
+      : '<span class="badge-sangle non">Non</span>';
+    const sigLink = (p, label) => {
+      if (!p) return '—';
+      const href = '/' + String(p).replace(/^\.\//, '');
+      return `<a href="${href}" target="_blank" title="${label}" style="font-size:18px;text-decoration:none;margin-right:4px">&#128196;</a>`;
+    };
+    const tr = document.createElement('tr');
+    tr.dataset.sigResp = r.sig_responsable || '';
+    tr.dataset.sigCond = r.sig_conducteur  || '';
+    tr.dataset.date    = r.date            || '';
+    tr.dataset.immat   = r.immatriculation || '';
+    tr.dataset.cond    = r.conducteur      || '';
+    tr.innerHTML = `
+      <td class="name-cell">${esc(r.immatriculation || '')}</td>
+      <td>${esc(r.conducteur || '')}</td>
+      <td>${sangleBadge}</td>
+      <td>${esc(r.date || '')}</td>
+      <td style="white-space:nowrap">${sigLink(r.sig_responsable, 'Sig. responsable')}${sigLink(r.sig_conducteur, 'Sig. conducteur')}</td>
+      <td style="text-align:right"><button data-action="delete-veh" class="btn btn-danger" style="padding:6px 10px;font-size:14px" title="Supprimer ce contrôle">&#128465;</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action="delete-veh"]');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    const { sigResp, sigCond, date, immat, cond } = tr.dataset;
+    if (!confirm(`Supprimer le contrôle de ${immat} (${cond}) du ${date} ?\n\nLes signatures associées seront également supprimées.`)) return;
+    btn.disabled = true;
+    btn.innerHTML = '…';
+    try {
+      const r = await fetch('/api/controle-vehicule', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sig_responsable: sigResp, sig_conducteur: sigCond, date, immatriculation: immat, conducteur: cond })
+      });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'HTTP ' + r.status); }
+      await loadVehicules();
+    } catch (err) {
+      alert('Erreur lors de la suppression : ' + err.message);
+      btn.disabled = false;
+      btn.innerHTML = '&#128465;';
+    }
+  });
+  tbl.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(tbl);
+}
+
 /* ── Events ────────────────────────────────────────── */
 document.getElementById('semaine-filter').addEventListener('change', e => {
   filterSemaine = e.target.value;
@@ -694,6 +783,7 @@ document.addEventListener('keydown', e => {
 
 /* ── Boot ──────────────────────────────────────────── */
 load();
+loadVehicules();
 setInterval(load, 60_000);
 </script>
 </body>
