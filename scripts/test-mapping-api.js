@@ -156,10 +156,12 @@ async function main() {
     }
   }
 
-  // 3. Liste véhicules → trouver un véhicule actif ──────────────────────────
-  sep('3. GET /Vehicles — filtrer les véhicules actifs (status !== OUT_FLEET)');
+  // 3. Liste véhicules → trouver un véhicule actif AVEC conducteur assigné ────
+  sep('3. GET /Vehicles — véhicule actif avec currentDriver non-null');
 
-  let activeReg = null;
+  const PREFERRED_REG = 'DF-017-KV';  // priorité si présent et actif avec conducteur
+  let activeReg  = null;
+  let tripsReg   = null;  // véhicule retenu pour l'étape 7
 
   {
     const url = `${BASE_API}/Vehicles`;
@@ -173,28 +175,50 @@ async function main() {
         try {
           const data  = JSON.parse(raw);
           const all   = Array.isArray(data) ? data : (data.items || data.results || data.data || data.vehicles || [data]);
+
+          function getReg(v) {
+            return v.registrationNumber || v.plate || v.immatriculation || String(v.id || '');
+          }
+          function hasDriver(v) {
+            return v.currentDriver !== null && v.currentDriver !== undefined
+                && v.currentDriver !== ''
+                && !(typeof v.currentDriver === 'object' && Object.keys(v.currentDriver).length === 0);
+          }
+
           const active = all.filter(v => {
             const st = (v.status || v.fleetStatus || v.vehicleStatus || '').toString().toUpperCase();
             return st !== 'OUT_FLEET' && st !== 'OUT OF FLEET';
           });
-          console.log(`\n✅ ${all.length} véhicules au total, ${active.length} actifs (hors OUT_FLEET)`);
-          console.log('\n--- 3 premiers véhicules actifs ---');
-          active.slice(0, 3).forEach((v, i) => {
-            const reg = v.registrationNumber || v.plate || v.immatriculation || v.id || '(?)';
-            const driver = v.currentDriver
-              ? JSON.stringify(v.currentDriver)
-              : (v.driverName || v.driver || v.driverId || '(null)');
-            const st = v.status || v.fleetStatus || '(no status field)';
+          const withDriver = active.filter(hasDriver);
+
+          console.log(`\n✅ ${all.length} véhicules au total, ${active.length} actifs, ${withDriver.length} avec currentDriver non-null`);
+
+          console.log('\n--- 3 premiers véhicules actifs avec conducteur ---');
+          withDriver.slice(0, 3).forEach((v, i) => {
+            const reg    = getReg(v);
+            const driver = JSON.stringify(v.currentDriver);
+            const st     = v.status || v.fleetStatus || '(no status field)';
             console.log(`   ${i + 1}. ${reg}  |  status: ${st}  |  currentDriver: ${driver}`);
           });
-          if (active.length > 0) {
-            activeReg = active[0].registrationNumber || active[0].plate || active[0].immatriculation || String(active[0].id);
-            console.log(`\n   → Véhicule actif retenu pour les tests : ${activeReg}`);
+
+          // Priorité : DF-017-KV s'il est dans withDriver
+          const preferred = withDriver.find(v => getReg(v) === PREFERRED_REG);
+          if (preferred) {
+            tripsReg = PREFERRED_REG;
+            console.log(`\n   → DF-017-KV trouvé avec conducteur : retenu pour l'étape 7`);
+          } else if (withDriver.length > 0) {
+            tripsReg = getReg(withDriver[0]);
+            console.log(`\n   → DF-017-KV absent/sans conducteur — premier véhicule avec conducteur retenu : ${tripsReg}`);
           } else {
-            console.log('\n⚠️  Aucun véhicule actif trouvé — affichage des 3 premiers sans filtre :');
-            all.slice(0, 3).forEach((v, i) => {
-              console.log(`   ${i + 1}.`, JSON.stringify(v, null, 2));
-            });
+            // Fallback : premier actif sans conducteur
+            tripsReg = active.length > 0 ? getReg(active[0]) : null;
+            console.log(`\n⚠️  Aucun véhicule avec currentDriver non-null — fallback sur le premier actif : ${tripsReg || '(aucun)'}`);
+          }
+
+          if (active.length > 0) {
+            activeReg = getReg(active[0]);
+          } else {
+            console.log('\n⚠️  Aucun véhicule actif trouvé.');
           }
         } catch {
           console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
@@ -332,8 +356,8 @@ async function main() {
     } // fin if (activeReg)
   }
 
-  // 7. Geolocation/Trips — CR-860-YB, hier, tous les trajets ─────────────────
-  const TRIPS_REG = 'CR-860-YB';   // véhicule connu pour avoir des trajets
+  // 7. Geolocation/Trips — véhicule avec conducteur, hier, tous les trajets ───
+  const TRIPS_REG = tripsReg || 'CR-860-YB';  // fallback si étape 3 a échoué
   sep(`7. GET /Geolocation/Trips — hier, registrationNumber=${TRIPS_REG} (tous les trajets)`);
 
   {
