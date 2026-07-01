@@ -356,6 +356,27 @@ app.get('/api/controle-vehicule/export', (req, res) => {
   });
 });
 
+app.get('/api/gps-hours/:date', (req, res) => {
+  const { date } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'Format de date invalide, attendu YYYY-MM-DD' });
+  }
+  const gpsFile = path.join(__dirname, 'data', 'gps-hours.json');
+  if (!fs.existsSync(gpsFile)) {
+    return res.status(404).json({ error: 'Aucune donnée GPS disponible (data/gps-hours.json absent)' });
+  }
+  try {
+    const all = JSON.parse(fs.readFileSync(gpsFile, 'utf8'));
+    if (!all[date]) {
+      return res.status(404).json({ error: `Pas de données GPS pour le ${date}` });
+    }
+    res.json({ date, drivers: all[date] });
+  } catch (e) {
+    logger.err(`GET /api/gps-hours/${date} : ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
 });
