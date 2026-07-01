@@ -260,6 +260,7 @@
     .btn:hover { opacity: .82; }
     .btn-primary { background: var(--navy); color: var(--white); }
     .btn-ghost   { background: var(--gray-100); color: var(--gray-800); }
+    .btn-danger  { background: var(--red-bg);   color: var(--red); }
 
     /* ── PDFs section ───────────────────────────────── */
     .pdfs-section { margin-top: 32px; }
@@ -336,22 +337,12 @@
   <div class="pdfs-section" style="margin-top:24px">
     <div class="toolbar">
       <div class="section-title">Feuilles d'heures</div>
-    </div>
-    <div class="table-wrapper">
-      <div id="feuilles-container" class="placeholder">Chargement…</div>
-    </div>
-  </div>
-
-  <!-- PDFs signés -->
-  <div class="pdfs-section">
-    <div class="toolbar">
-      <div class="section-title">PDFs signés</div>
       <div class="toolbar-right">
-        <a href="/api/pdfs/zip" class="btn btn-primary">&#128230; Tout télécharger (ZIP)</a>
+        <a href="/api/pdfs/zip" class="btn btn-ghost">&#128230; Télécharger tout (ZIP)</a>
       </div>
     </div>
     <div class="table-wrapper">
-      <div id="pdfs-container" class="placeholder">Chargement…</div>
+      <div id="feuilles-container" class="placeholder">Chargement…</div>
     </div>
   </div>
 
@@ -634,9 +625,13 @@ function renderFeuilles() {
       ? '/pdfs/' + encodeURIComponent(String(f.lien_pdf).replace(/^.*[\\/]/, ''))
       : '';
     const pdfLink = pdfHref
-      ? `<a href="${pdfHref}" target="_blank" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">&#128196; PDF</a>`
+      ? `<a href="${pdfHref}" target="_blank" class="btn btn-ghost" style="padding:6px 10px;font-size:12px">&#128196; PDF</a>`
       : '';
     const tr = document.createElement('tr');
+    tr.dataset.nom    = f.nom    || '';
+    tr.dataset.prenom = f.prenom || '';
+    tr.dataset.semaine= String(f.semaine || '');
+    tr.dataset.mois   = mois;
     tr.innerHTML = `
       <td class="name-cell">${esc(f.prenom||'')} ${esc(f.nom||'')}</td>
       <td>${esc(String(f.semaine||''))}</td>
@@ -644,47 +639,31 @@ function renderFeuilles() {
       <td class="num">${fmtH(f.total_heures)}</td>
       <td class="num">${String(f.total_paniers||0)}</td>
       <td>${esc(f.statut||'')}</td>
-      <td style="text-align:right">${pdfLink}</td>`;
+      <td style="text-align:right;white-space:nowrap">${pdfLink}<button data-action="delete" class="btn btn-danger" style="padding:6px 10px;font-size:14px;margin-left:4px" title="Supprimer cette feuille">&#128465;</button></td>`;
     tbody.appendChild(tr);
   });
-  tbl.appendChild(tbody);
-  container.innerHTML = '';
-  container.appendChild(tbl);
-}
-
-/* ── PDFs ──────────────────────────────────────────── */
-async function loadPdfs() {
-  try {
-    const r = await fetch('/api/pdfs');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    renderPdfs(await r.json());
-  } catch (e) {
-    document.getElementById('pdfs-container').innerHTML =
-      `<div class="placeholder"><strong>Erreur</strong>${e.message}</div>`;
-  }
-}
-
-function renderPdfs(pdfs) {
-  const container = document.getElementById('pdfs-container');
-  if (!pdfs.length) {
-    container.innerHTML = '<div class="placeholder"><strong>Aucun PDF</strong>Aucune feuille signée disponible.</div>';
-    return;
-  }
-  const tbl = document.createElement('table');
-  tbl.innerHTML = `<thead><tr>
-    <th>Nom du fichier</th><th>Date</th><th>Taille</th><th></th>
-  </tr></thead>`;
-  const tbody = document.createElement('tbody');
-  pdfs.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="name-cell">${esc(p.nom)}</td>
-      <td>${esc(p.date)}</td>
-      <td style="color:var(--gray-600)">${esc(p.taille)}</td>
-      <td style="text-align:right">
-        <a href="${p.url}" download="${esc(p.nom)}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">&#11123; Télécharger</a>
-      </td>`;
-    tbody.appendChild(tr);
+  tbody.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action="delete"]');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    const { nom, prenom, semaine, mois } = tr.dataset;
+    const label = `${prenom} ${nom} — sem. ${semaine}${mois ? ' / mois ' + mois : ''}`;
+    if (!confirm(`Supprimer la feuille de ${label} ?\n\nLe PDF associé sera également supprimé.`)) return;
+    btn.disabled = true;
+    btn.innerHTML = '…';
+    try {
+      const r = await fetch('/api/feuille', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom, prenom, semaine, mois_paie: mois })
+      });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'HTTP ' + r.status); }
+      await load();
+    } catch (err) {
+      alert('Erreur lors de la suppression : ' + err.message);
+      btn.disabled = false;
+      btn.innerHTML = '&#128465;';
+    }
   });
   tbl.appendChild(tbody);
   container.innerHTML = '';
@@ -714,7 +693,6 @@ document.addEventListener('keydown', e => {
 
 /* ── Boot ──────────────────────────────────────────── */
 load();
-loadPdfs();
 setInterval(load, 60_000);
 </script>
 </body>

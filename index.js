@@ -5,12 +5,22 @@ const path          = require('path');
 const fs            = require('fs');
 const archiver      = require('archiver');
 const { handleFeuille }            = require('./modules/webhook');
-const { readWorkbook, getSheetData } = require('./modules/excel');
+const { readWorkbook, getSheetData, replaceSheet } = require('./modules/excel');
 const parserFacture = require('./modules/parser-facture');
 const parserMapping = require('./modules/parser-mapping');
 const logger        = require('./modules/logger');
+const calcul        = require('./modules/calcul-controles');
 
 const PORT = process.env.PORT || 3000;
+
+function normStr(s) {
+  return String(s || '').toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function parseNumSemaine(semaine) {
+  const s = String(semaine || '');
+  const m = s.match(/\d{4}\.(\d{2})/) || s.match(/(\d{1,2})/);
+  return m ? m[1].padStart(2, '0') : s;
+}
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -210,6 +220,41 @@ app.get('/api/pdfs/zip', (_req, res) => {
   archive.pipe(res);
   if (fs.existsSync(PDFS_DIR)) archive.directory(PDFS_DIR, false);
   archive.finalize();
+});
+
+app.delete('/api/feuille', async (req, res) => {
+  try {
+    const nom      = String(req.body.nom      || '');
+    const prenom   = String(req.body.prenom   || '');
+    const semaine  = String(req.body.semaine  || '');
+    const moisPaie = String(req.body.mois_paie || '').replace(/[^0-9]/g, '');
+    if (!nom || !semaine) return res.status(400).json({ error: 'Paramètres manquants' });
+
+    const rows = getSheetData(readWorkbook(), 'Feuilles');
+    const idx  = rows.findIndex(r =>
+      normStr(r.nom)    === normStr(nom) &&
+      normStr(r.prenom) === normStr(prenom) &&
+      parseNumSemaine(r.semaine) === parseNumSemaine(semaine) &&
+      String(r.mois_paie || '').replace(/[^0-9]/g, '') === moisPaie
+    );
+    if (idx === -1) return res.status(404).json({ error: 'Feuille introuvable' });
+
+    const lienPdf = rows[idx].lien_pdf;
+    if (lienPdf) {
+      try {
+        const pdfPath = path.join(__dirname, String(lienPdf).replace(/^\.\//, ''));
+        if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+      } catch (e) { logger.warn(`Suppression PDF : ${e.message}`); }
+    }
+
+    await replaceSheet('Feuilles', rows.filter((_, i) => i !== idx));
+    await calcul.recalculer();
+    logger.ok(`Feuille supprimée : ${nom} ${prenom} sem.${parseNumSemaine(semaine)}`);
+    res.json({ status: 'ok' });
+  } catch (err) {
+    logger.err(`DELETE /api/feuille : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/health', (_req, res) => {
