@@ -630,8 +630,11 @@ function renderFeuilles() {
   feuilles.forEach(f => {
     const mois = String(f.mois_paie || '');
     const moisBadge = mois ? `<span class="badge badge-mois">${esc(mois)}</span>` : '—';
-    const pdfLink = f.lien_pdf
-      ? `<a href="${f.lien_pdf}" target="_blank" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">&#128196; PDF</a>`
+    const pdfHref = f.lien_pdf
+      ? '/pdfs/' + encodeURIComponent(String(f.lien_pdf).replace(/^.*[\\/]/, ''))
+      : '';
+    const pdfLink = pdfHref
+      ? `<a href="${pdfHref}" target="_blank" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">&#128196; PDF</a>`
       : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
