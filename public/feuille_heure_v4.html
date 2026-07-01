@@ -900,9 +900,13 @@ function mettreAJourRecap() {
 
 // ══ SPLIT MOIS DE PAIE ══
 function isoWeekDates(sem, annee) {
-  var jan1 = new Date(annee, 0, 1);
-  var lundi = new Date(jan1);
-  lundi.setDate(jan1.getDate() + (sem - 1) * 7 - (jan1.getDay() || 7) + 1);
+  // Ancrage ISO 8601 : le 4 janvier appartient toujours à la semaine 1
+  var jan4 = new Date(annee, 0, 4);
+  var jour = jan4.getDay() || 7;          // 1=lundi … 7=dimanche
+  var lundiSem1 = new Date(jan4);
+  lundiSem1.setDate(jan4.getDate() - (jour - 1));  // lundi de la semaine 1
+  var lundi = new Date(lundiSem1);
+  lundi.setDate(lundiSem1.getDate() + (sem - 1) * 7);
   return Array.from({length: 7}, function(_, i) {
     var d = new Date(lundi); d.setDate(lundi.getDate() + i); return d;
   });
