@@ -166,6 +166,7 @@
     .badge-attente  { background: var(--gray-100);  color: var(--gray-600); }
     .badge-attention{ background: var(--orange-bg); color: #c2570b; }
     .badge-critique { background: var(--red-bg);    color: #dc2626; }
+    .badge-mois     { background: #dbeafe; color: #1d4ed8; }
 
     /* ── Empty / loading ────────────────────────────── */
     .placeholder { text-align: center; padding: 60px 20px; color: var(--gray-400); font-size: 14px; }
@@ -331,6 +332,16 @@
     <div id="table-container" class="placeholder">Chargement…</div>
   </div>
 
+  <!-- Feuilles d'heures -->
+  <div class="pdfs-section" style="margin-top:24px">
+    <div class="toolbar">
+      <div class="section-title">Feuilles d'heures</div>
+    </div>
+    <div class="table-wrapper">
+      <div id="feuilles-container" class="placeholder">Chargement…</div>
+    </div>
+  </div>
+
   <!-- PDFs signés -->
   <div class="pdfs-section">
     <div class="toolbar">
@@ -391,6 +402,7 @@ function render() {
   populateFilter();
   renderStats();
   renderTable();
+  renderFeuilles();
 }
 
 function populateFilter() {
@@ -596,6 +608,45 @@ function openModal(nom, prenom, semaine) {
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+/* ── Feuilles ──────────────────────────────────────── */
+function renderFeuilles() {
+  const container = document.getElementById('feuilles-container');
+  const feuilles = (data.feuilles || []).slice().sort((a, b) => {
+    const sa = String(a.semaine || ''), sb = String(b.semaine || '');
+    return sb.localeCompare(sa) || (a.nom||'').localeCompare(b.nom||'');
+  });
+  if (!feuilles.length) {
+    container.innerHTML = '<div class="placeholder"><strong>Aucune feuille</strong>Aucune donnée disponible.</div>';
+    return;
+  }
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th>Intérimaire</th><th>Semaine</th><th>Mois</th>
+    <th>Total H</th><th>Paniers</th><th>Statut</th><th></th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  feuilles.forEach(f => {
+    const mois = String(f.mois_paie || '');
+    const moisBadge = mois ? `<span class="badge badge-mois">${esc(mois)}</span>` : '—';
+    const pdfLink = f.lien_pdf
+      ? `<a href="${f.lien_pdf}" target="_blank" class="btn btn-ghost" style="padding:6px 12px;font-size:12px">&#128196; PDF</a>`
+      : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="name-cell">${esc(f.prenom||'')} ${esc(f.nom||'')}</td>
+      <td>${esc(String(f.semaine||''))}</td>
+      <td>${moisBadge}</td>
+      <td class="num">${fmtH(f.total_heures)}</td>
+      <td class="num">${String(f.total_paniers||0)}</td>
+      <td>${esc(f.statut||'')}</td>
+      <td style="text-align:right">${pdfLink}</td>`;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(tbl);
 }
 
 /* ── PDFs ──────────────────────────────────────────── */

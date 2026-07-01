@@ -898,6 +898,97 @@ function mettreAJourRecap() {
   }
 }
 
+// ══ SPLIT MOIS DE PAIE ══
+function isoWeekDates(sem, annee) {
+  var jan1 = new Date(annee, 0, 1);
+  var lundi = new Date(jan1);
+  lundi.setDate(jan1.getDate() + (sem - 1) * 7 - (jan1.getDay() || 7) + 1);
+  return Array.from({length: 7}, function(_, i) {
+    var d = new Date(lundi); d.setDate(lundi.getDate() + i); return d;
+  });
+}
+
+function detecterSplit(sem, annee) {
+  var dates = isoWeekDates(sem, annee);
+  for (var i = 1; i < 7; i++) {
+    if (dates[i].getMonth() !== dates[0].getMonth()) {
+      return [
+        { mois: String(dates[0].getMonth() + 1).padStart(2, '0'),
+          indices: Array.from({length: i}, function(_, k) { return k; }) },
+        { mois: String(dates[i].getMonth() + 1).padStart(2, '0'),
+          indices: Array.from({length: 7 - i}, function(_, k) { return i + k; }) }
+      ];
+    }
+  }
+  return null;
+}
+
+function envoyerEnSplit(splitParts, basePayload, jours, sem, semStr, annee, now) {
+  var st = document.getElementById('send-status');
+  var partIdx = 0;
+
+  function envoyerProchainePart() {
+    if (partIdx >= splitParts.length) {
+      st.className = 'send-ok';
+      st.textContent = '✓ Fiches envoyées (' + splitParts.map(function(p) { return 'mois ' + p.mois; }).join(' + ') + ')';
+      try { localStorage.removeItem(getCleStorage()); } catch(e) {}
+      return;
+    }
+    var part = splitParts[partIdx];
+
+    var partJours = jours.map(function(jr, i) {
+      if (part.indices.indexOf(i) === -1)
+        return { jour: jr.jour, travaille: 'Non', heures: 0, panier: '', site: '', obs: '', sig_inter: '', sig_chef: '' };
+      return jr;
+    });
+
+    var partTotalH = 0, partTotalP = 0;
+    part.indices.forEach(function(i) {
+      var jr = jours[i];
+      if (jr && jr.travaille === 'Oui') { partTotalH += jr.heures || 0; if (jr.panier === 'Oui') partTotalP++; }
+    });
+
+    var ts = now.getTime().toString(36).toUpperCase();
+    var numDoc = 'DSN-' + annee + '-S' + semStr + '-' + part.mois + '-' + basePayload.nom.substring(0, 4) + '-' + ts;
+
+    var partPayload = Object.assign({}, basePayload, {
+      jours: partJours,
+      total_heures: parseFloat(partTotalH.toFixed(2)),
+      total_paniers: partTotalP,
+      mois_paie: part.mois,
+      num_document: numDoc
+    });
+
+    st.className = '';
+    st.style.background = 'var(--amber-bg)'; st.style.color = 'var(--amber)';
+    st.textContent = 'Génération PDF mois ' + part.mois + '…';
+
+    function envoyerPart(p, pdfB64) {
+      if (pdfB64) p.pdf_base64 = pdfB64;
+      st.textContent = 'Envoi mois ' + part.mois + '…';
+      fetch(N8N_WEBHOOK_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p) })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(data) {
+          if (data.status === 'doublon') {
+            window._doublonRetry = function() { p.forcer = true; envoyerPart(p, pdfB64); };
+            afficherModalDoublon(data.message);
+            return;
+          }
+          partIdx++;
+          envoyerProchainePart();
+        })
+        .catch(function(err) {
+          st.className = 'send-err';
+          st.textContent = '✗ Erreur mois ' + part.mois + ' — ' + (err && err.message ? err.message : 'réseau');
+        });
+    }
+
+    genererPDFBase64(partPayload, function(pdfB64) { envoyerPart(partPayload, pdfB64); });
+  }
+
+  envoyerProchainePart();
+}
+
 // ══ MODAL DOUBLON ══
 function afficherModalDoublon(msg) {
   document.getElementById('modal-doublon-msg').textContent = msg;
@@ -1033,7 +1124,13 @@ function envoyerSemaine() {
     });
   }
 
-  genererPDFBase64(payload, doEnvoi);
+  var annee = now.getFullYear();
+  var splitParts = detecterSplit(sem, annee);
+  if (!splitParts) {
+    genererPDFBase64(payload, doEnvoi);
+  } else {
+    envoyerEnSplit(splitParts, payload, jours, sem, semStr, annee, now);
+  }
 }
 
 // ══ SIGNATURES ══
@@ -1191,7 +1288,8 @@ function _buildPDF(doc, payload) {
   doc.setFont('helvetica','bold'); doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);
   doc.text('Semaine n° :',W/2+5,y);
   doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
-  doc.text(String(payload.semaine), W/2+35, y);
+  var semLabel = String(payload.semaine) + (payload.mois_paie ? ' — mois '+payload.mois_paie : '');
+  doc.text(semLabel, W/2+35, y);
   y+=6;
 
   doc.setFont('helvetica','bold'); doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);

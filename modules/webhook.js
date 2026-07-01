@@ -57,6 +57,7 @@ async function handleFeuille(req, res) {
     const prenom = data.prenom || '';
     const semaine = data.semaine || '';
     const numSem = parseNumSemaine(semaine);
+    const moisPaie = String(data.mois_paie || '').replace(/[^0-9]/g, '');
 
     // hash_sha256 est un hash des métadonnées client (non vérifié côté serveur — stocké tel quel dans Excel)
 
@@ -71,7 +72,8 @@ async function handleFeuille(req, res) {
     // Save signed PDF if provided
     let lienPdf = '';
     if (data.pdf_base64) {
-      const pdfName = `feuille_${safeFilePart(nom)}_${safeFilePart(prenom)}_sem${numSem}.pdf`;
+      const moisSuffix = moisPaie ? `_${moisPaie}` : '';
+      const pdfName = `feuille_${safeFilePart(nom)}_${safeFilePart(prenom)}_sem${numSem}${moisSuffix}.pdf`;
       const pdfPath = path.join(PDF_DIR, pdfName);
       logger.info(`[PDF-DIAG] Chemin cible: ${pdfPath}`);
       // Strip data URI prefix if the client included it (e.g. "data:application/pdf;base64,")
@@ -130,6 +132,7 @@ async function handleFeuille(req, res) {
       total_paniers:  data.total_paniers ?? 0,
       statut:         data.statut      || 'RECU',
       observations:   data.observations || '',
+      mois_paie:      moisPaie,
       ...joursData,
       lien_pdf:       lienPdf,
       num_document:   data.num_document  || '',
@@ -144,17 +147,18 @@ async function handleFeuille(req, res) {
     const doublonIdx = existingRows.findIndex((r) =>
       normStr(r.nom) === nomNorm &&
       normStr(r.prenom) === prenomNorm &&
-      parseNumSemaine(r.semaine) === numSem
+      parseNumSemaine(r.semaine) === numSem &&
+      String(r.mois_paie || '') === moisPaie
     );
 
     if (doublonIdx !== -1 && !data.forcer) {
-      // Supprimer le PDF qu'on vient d'écrire (doublon refusé)
       if (lienPdf) {
         try { fs.unlinkSync(path.join(__dirname, '..', lienPdf.replace(/^\.\//, ''))); } catch (_) {}
       }
+      const moisLabel = moisPaie ? ` (mois ${moisPaie})` : '';
       return res.json({
         status: 'doublon',
-        message: `Une fiche existe déjà pour ${nom} ${prenom} semaine ${numSem}. Voulez-vous la remplacer ?`,
+        message: `Une fiche existe déjà pour ${nom} ${prenom} semaine ${numSem}${moisLabel}. Voulez-vous la remplacer ?`,
       });
     }
 
