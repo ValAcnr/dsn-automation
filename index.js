@@ -135,6 +135,7 @@ app.get('/api/conges', async (_req, res) => {
     let start = 0;
     let totalSize = null;
     let allResults = [];
+    let pagesCount = 0;
 
     do {
       const page = await fetchPage(start);
@@ -143,10 +144,14 @@ app.get('/api/conges', async (_req, res) => {
       if (totalSize === null) totalSize = page.totalSize ?? results.length;
       logger.info(`[congés] page start=${start} → ${results.length} résultats, totalSize=${totalSize}`);
       start += LIMIT;
+      pagesCount++;
     } while (start < totalSize);
+
+    logger.info(`[congés] pagination terminée : ${pagesCount} page(s), totalSize=${totalSize}, ${allResults.length} résultats bruts avant dedup`);
 
     // Déduplication par id (la dernière page Eurecia chevauche la précédente)
     allResults = [...new Map(allResults.map(r => [r.id, r])).values()];
+    logger.info(`[congés] après dedup : ${allResults.length} entrées uniques`);
 
     const formatted = allResults.map(a => ({
       nom: a._embedded?.user?.fullName || a.fullName || '',
