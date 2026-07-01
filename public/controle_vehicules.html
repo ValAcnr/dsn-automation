@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Contrôle véhicules — DSN Transports</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    :root{
+      --navy:#1a2f5a;--navy2:#1e3a73;
+      --blue:#2563eb;
+      --green:#22c55e;
+      --red:#ef4444;--red-bg:#fef2f2;
+      --bg:#f0f4f8;--white:#fff;
+      --border:#d1d5db;--border-light:#e5e7eb;
+      --text:#1e293b;--text2:#374151;--text3:#6b7280;--text4:#9ca3af;
+      --r:12px;--rx:8px;
+      --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+      --shadow-card:0 2px 8px rgba(0,0,0,.08);
+    }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* ── Header ── */
+    .hdr{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
+      color:#fff;padding-top:env(safe-area-inset-top)}
+    .hdr-inner{padding:14px 16px;display:flex;align-items:center;gap:12px}
+    .hdr-logo{background:rgba(255,255,255,.18);border-radius:8px;padding:5px 10px;
+      font-size:13px;font-weight:800;letter-spacing:-.3px;flex-shrink:0}
+    .hdr-title{font-size:17px;font-weight:700;line-height:1.2}
+    .hdr-sub{font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+    /* ── Layout ── */
+    .main{padding:16px;max-width:600px;margin:0 auto;
+      padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+
+    /* ── Date bar ── */
+    .date-bar{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);
+      padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+    .date-bar label{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap}
+    .date-bar input{flex:1;border:1px solid var(--border);border-radius:var(--rx);
+      padding:9px 12px;font-size:15px;font-family:inherit;color:var(--text);outline:none;
+      background:var(--bg);transition:border-color .15s}
+    .date-bar input:focus{border-color:var(--blue);background:var(--white)}
+
+    /* ── Card ── */
+    .vc-card{background:var(--white);border-radius:var(--r);
+      box-shadow:var(--shadow-card);margin-bottom:14px;overflow:hidden}
+    .vc-card-head{background:linear-gradient(135deg,var(--navy),var(--navy2));
+      color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+    .vc-card-num{font-size:14px;font-weight:700;letter-spacing:.3px}
+    .btn-del{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;
+      padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+      transition:background .15s}
+    .btn-del:hover{background:rgba(239,68,68,.55)}
+    .vc-card-body{padding:16px 16px 4px}
+
+    /* ── Fields ── */
+    .field{margin-bottom:14px}
+    .field-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
+    .fi{width:100%;border:1px solid var(--border);border-radius:var(--rx);
+      padding:11px 14px;font-size:16px;font-family:inherit;color:var(--text);
+      outline:none;background:var(--bg);transition:border-color .15s,-webkit-appearance 0s}
+    .fi:focus{border-color:var(--blue);background:var(--white)}
+
+    /* ── Toggle sangle ── */
+    .field-sangle{display:flex;align-items:center;gap:12px;padding:10px 0}
+    .field-sangle .field-label{margin-bottom:0;flex:1}
+    .sw{width:46px;height:27px;border-radius:14px;background:#D1D5DB;border:none;
+      position:relative;cursor:pointer;transition:.22s;flex-shrink:0;
+      box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+    .sw::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;
+      border-radius:50%;background:#fff;transition:.22s;
+      box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .sw.on{background:var(--green)}
+    .sw.on::after{left:calc(100% - 24px)}
+    .sangle-val{font-size:14px;font-weight:700;color:var(--text3);min-width:30px}
+    .sw.on ~ .sangle-val{color:var(--green)}
+
+    /* ── Signature pad (same component as feuille_heure_v4.html) ── */
+    .sig-lbl{font-size:11px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
+    .sig-wrap{position:relative;background:var(--bg);border:2px dashed var(--border);
+      border-radius:var(--rx);overflow:hidden;touch-action:none;margin-bottom:6px;
+      transition:border-color .2s}
+    .sig-wrap:has(canvas:active){border-color:var(--blue)}
+    .sig-wrap canvas{display:block;width:100%;height:100px}
+    .sig-hint{position:absolute;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;pointer-events:none;gap:4px}
+    .sig-hint-ico{font-size:22px;opacity:.25}
+    .sig-hint-txt{font-size:12px;color:var(--text4);font-weight:500}
+    .sig-act{display:flex;justify-content:flex-end;margin-bottom:14px}
+    .sig-clear{font-size:11px;padding:4px 10px;background:transparent;
+      border:1px solid var(--border);border-radius:var(--rx);cursor:pointer;
+      font-family:inherit;color:var(--text3);transition:all .15s}
+    .sig-clear:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+    /* ── Card footer ── */
+    .vc-card-footer{border-top:1px solid var(--border-light);padding:10px 16px;
+      display:flex;justify-content:flex-end}
+    .btn-add-after{background:transparent;border:1px solid var(--border);color:var(--text3);
+      border-radius:var(--rx);padding:8px 14px;font-size:13px;font-weight:600;
+      cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-add-after:hover{border-color:var(--blue);color:var(--blue)}
+
+    /* ── Global buttons ── */
+    .btn-add-global{width:100%;background:var(--white);border:2px dashed var(--border);
+      color:var(--text3);border-radius:var(--r);padding:14px 16px;font-size:15px;
+      font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px;transition:all .15s}
+    .btn-add-global:hover{border-color:var(--blue);color:var(--blue);border-style:solid}
+
+    .btn-envoyer{width:100%;background:linear-gradient(135deg,var(--navy),var(--navy2));
+      color:#fff;border:none;border-radius:var(--r);padding:16px;font-size:16px;
+      font-weight:700;cursor:pointer;font-family:inherit;
+      box-shadow:0 4px 12px rgba(26,47,90,.35);transition:opacity .15s;letter-spacing:.3px}
+    .btn-envoyer:hover{opacity:.88}
+    .btn-envoyer:disabled{opacity:.5;cursor:not-allowed}
+
+    /* ── Status ── */
+    .status{border-radius:var(--rx);padding:12px 14px;margin-bottom:14px;
+      font-size:14px;font-weight:500;display:none;line-height:1.4}
+    .status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
+    .status.err{background:var(--red-bg);color:#991b1b;border:1px solid #fecaca;display:block}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-logo">DSN</div>
+    <div>
+      <div class="hdr-title">Contrôle véhicules</div>
+      <div class="hdr-sub">DSN Transports · AEL Services</div>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="date-bar">
+    <label for="date-controle">Date</label>
+    <input type="date" id="date-controle">
+  </div>
+
+  <div id="vc-list"></div>
+
+  <button class="btn-add-global" onclick="addLigne(true)">+ Ajouter une ligne</button>
+
+  <div class="status" id="status-bar"></div>
+
+  <button class="btn-envoyer" id="btn-envoyer" onclick="envoyerTout()">Envoyer</button>
+
+</div>
+
+<script>
+'use strict';
+
+var pads     = {};
+var rowCount = 0;
+
+/* ── Signature pad — même logique que feuille_heure_v4.html ── */
+function initPad(id) {
+  var canvas = document.getElementById('sig-' + id);
+  var wrap   = document.getElementById('sig-wrap-' + id);
+  var hint   = document.getElementById('sig-hint-' + id);
+  if (!canvas || !wrap) return;
+  if (pads[id]) pads[id] = null;
+  var ctx = canvas.getContext('2d');
+  var drawing = false, hasSig = false;
+  function resize() {
+    var r = window.devicePixelRatio || 1;
+    var w = wrap.getBoundingClientRect().width || wrap.offsetWidth || 280;
+    if (w < 10) w = 280;
+    canvas.width  = w * r; canvas.height = 100 * r;
+    canvas.style.width = w + 'px'; canvas.style.height = '100px';
+    ctx.scale(r, r); ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.lineJoin = 'round'; ctx.strokeStyle = '#1A1A18';
+  }
+  resize();
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var src  = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+  function start(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); if (hint) hint.style.opacity = '0'; }
+  function move(e)  { if (!drawing) return; e.preventDefault(); var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); hasSig = true; }
+  function stop(e)  { e.preventDefault(); drawing = false; }
+  canvas.addEventListener('mousedown',  start);
+  canvas.addEventListener('mousemove',  move);
+  canvas.addEventListener('mouseup',    stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove',  move,  { passive: false });
+  canvas.addEventListener('touchend',   stop,  { passive: false });
+  pads[id] = {
+    has: function () { return hasSig; },
+    clear: function () {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasSig = false;
+      if (hint) hint.style.opacity = '1';
+    },
+    img: function () {
+      var tmp  = document.createElement('canvas');
+      tmp.width = canvas.width; tmp.height = canvas.height;
+      var ctx2 = tmp.getContext('2d');
+      ctx2.fillStyle = '#ffffff'; ctx2.fillRect(0, 0, tmp.width, tmp.height);
+      ctx2.drawImage(canvas, 0, 0);
+      return tmp.toDataURL('image/png');
+    }
+  };
+}
+
+function clearSig(id) { if (pads[id]) pads[id].clear(); }
+
+/* ── Toggle sangle ── */
+function toggleSangle(btn) {
+  var on = btn.classList.contains('on');
+  btn.classList.toggle('on', !on);
+  btn.nextElementSibling.textContent = on ? 'Non' : 'Oui';
+}
+
+/* ── Numérotation visuelle ── */
+function renumberCards() {
+  document.querySelectorAll('.vc-card .vc-card-num').forEach(function (el, i) {
+    el.textContent = 'Véhicule ' + (i + 1);
+  });
+}
+
+/* ── Ajout d'une ligne véhicule ── */
+function addLigne(doScroll) {
+  var idx = rowCount++;
+  var div = document.createElement('div');
+  div.className = 'vc-card';
+  div.id = 'vc-card-' + idx;
+  div.innerHTML =
+    '<div class="vc-card-head">' +
+      '<span class="vc-card-num">Véhicule 1</span>' +
+      '<button class="btn-del" type="button" onclick="removeLigne(this)">✕ Supprimer</button>' +
+    '</div>' +
+    '<div class="vc-card-body">' +
+      '<div class="field">' +
+        '<label class="field-label">Immatriculation</label>' +
+        '<input class="fi" type="text" data-field="immatriculation" placeholder="AA-123-BB" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
+      '</div>' +
+      '<div class="field">' +
+        '<label class="field-label">Conducteur</label>' +
+        '<input class="fi" type="text" data-field="conducteur" placeholder="Nom Prénom" autocomplete="off">' +
+      '</div>' +
+      '<div class="field field-sangle">' +
+        '<span class="field-label">Sangle présente</span>' +
+        '<button class="sw" type="button" onclick="toggleSangle(this)"></button>' +
+        '<span class="sangle-val">Non</span>' +
+      '</div>' +
+      '<div class="field">' +
+        '<div class="sig-lbl">Signature responsable</div>' +
+        '<div class="sig-wrap" id="sig-wrap-resp-' + idx + '">' +
+          '<canvas id="sig-resp-' + idx + '"></canvas>' +
+          '<div class="sig-hint" id="sig-hint-resp-' + idx + '">' +
+            '<div class="sig-hint-ico">✍️</div>' +
+            '<div class="sig-hint-txt">Signer ici</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sig-act"><button class="sig-clear" type="button" onclick="clearSig(\'resp-' + idx + '\')">Effacer</button></div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<div class="sig-lbl">Signature conducteur</div>' +
+        '<div class="sig-wrap" id="sig-wrap-cond-' + idx + '">' +
+          '<canvas id="sig-cond-' + idx + '"></canvas>' +
+          '<div class="sig-hint" id="sig-hint-cond-' + idx + '">' +
+            '<div class="sig-hint-ico">✍️</div>' +
+            '<div class="sig-hint-txt">Signer ici</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sig-act"><button class="sig-clear" type="button" onclick="clearSig(\'cond-' + idx + '\')">Effacer</button></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="vc-card-footer">' +
+      '<button class="btn-add-after" type="button" onclick="addLigne(true)">+ Ajouter un contrôle</button>' +
+    '</div>';
+  document.getElementById('vc-list').appendChild(div);
+  renumberCards();
+  initPad('resp-' + idx);
+  initPad('cond-' + idx);
+  if (doScroll) div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── Suppression d'une ligne ── */
+function removeLigne(btn) {
+  var card = btn.closest('.vc-card');
+  var idx  = card.id.replace('vc-card-', '');
+  delete pads['resp-' + idx];
+  delete pads['cond-' + idx];
+  card.remove();
+  renumberCards();
+}
+
+/* ── Message statut ── */
+function showStatus(type, msg) {
+  var el = document.getElementById('status-bar');
+  el.textContent = msg;
+  el.className = 'status ' + (type === 'ok' ? 'ok' : 'err');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* ── Envoi global ── */
+async function envoyerTout() {
+  var cards  = document.querySelectorAll('.vc-card');
+  var date   = document.getElementById('date-controle').value;
+  var lignes = [];
+  var errCard = null;
+
+  cards.forEach(function (card) {
+    if (errCard) return;
+    var idx    = card.id.replace('vc-card-', '');
+    var immat  = card.querySelector('[data-field="immatriculation"]').value.trim().toUpperCase();
+    var cond   = card.querySelector('[data-field="conducteur"]').value.trim();
+    if (!immat || !cond) { errCard = card; return; }
+    var sangle = card.querySelector('.sw').classList.contains('on');
+    var rPad   = pads['resp-' + idx];
+    var cPad   = pads['cond-' + idx];
+    lignes.push({
+      immatriculation:      immat,
+      conducteur:           cond,
+      sangle:               sangle,
+      signatureResponsable: rPad && rPad.has() ? rPad.img() : '',
+      signatureConducteur:  cPad && cPad.has() ? cPad.img() : '',
+      date:                 date
+    });
+  });
+
+  if (errCard) {
+    errCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showStatus('err', 'Remplissez l\'immatriculation et le nom du conducteur pour chaque véhicule.');
+    return;
+  }
+  if (!lignes.length) {
+    showStatus('err', 'Ajoutez au moins un véhicule.');
+    return;
+  }
+
+  var btn = document.getElementById('btn-envoyer');
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours…';
+
+  try {
+    var r = await fetch('/api/controle-vehicule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lignes)
+    });
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+    showStatus('ok', (j.count || lignes.length) + ' contrôle(s) enregistré(s) avec succès.');
+    // Réinitialisation
+    document.getElementById('vc-list').innerHTML = '';
+    Object.keys(pads).forEach(function (k) { delete pads[k]; });
+    rowCount = 0;
+    addLigne();
+  } catch (e) {
+    showStatus('err', 'Erreur lors de l\'envoi : ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Envoyer';
+  }
+}
+
+/* ── Init ── */
+document.getElementById('date-controle').valueAsDate = new Date();
+addLigne();
+</script>
+</body>
+</html>

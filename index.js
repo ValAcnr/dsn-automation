@@ -9,7 +9,8 @@ const { readWorkbook, getSheetData, replaceSheet } = require('./modules/excel');
 const parserFacture = require('./modules/parser-facture');
 const parserMapping = require('./modules/parser-mapping');
 const logger        = require('./modules/logger');
-const calcul        = require('./modules/calcul-controles');
+const calcul          = require('./modules/calcul-controles');
+const excelVehicules  = require('./modules/excel-vehicules');
 
 const PORT = process.env.PORT || 3000;
 
@@ -189,6 +190,7 @@ app.get('/api/dashboard', (_req, res) => {
 });
 
 const PDFS_DIR = path.join(__dirname, 'pdfs');
+const SIG_DIR  = path.join(__dirname, 'signatures', 'controle_vehicules');
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -262,6 +264,48 @@ app.delete('/api/feuille', async (req, res) => {
     res.json({ status: 'ok' });
   } catch (err) {
     logger.err(`DELETE /api/feuille : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/controle-vehicule', async (req, res) => {
+  try {
+    const lignes = Array.isArray(req.body) ? req.body : [];
+    if (!lignes.length) return res.status(400).json({ error: 'Tableau vide' });
+
+    if (!fs.existsSync(SIG_DIR)) fs.mkdirSync(SIG_DIR, { recursive: true });
+
+    const saveSig = (b64field, fname) => {
+      if (!b64field) return '';
+      const b64 = String(b64field).replace(/^data:image\/[a-z]+;base64,/, '');
+      fs.writeFileSync(path.join(SIG_DIR, fname), Buffer.from(b64, 'base64'));
+      return `./signatures/controle_vehicules/${fname}`;
+    };
+
+    for (let i = 0; i < lignes.length; i++) {
+      const l         = lignes[i];
+      const safeImmat = String(l.immatriculation || 'INCONNUE').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+      const safeDate  = String(l.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+      const uid       = `${safeImmat}_${safeDate}_${Date.now() + i}`;
+
+      const sigResp = saveSig(l.signatureResponsable, `${uid}_responsable.png`);
+      const sigCond = saveSig(l.signatureConducteur,  `${uid}_conducteur.png`);
+
+      await excelVehicules.appendRow({
+        date:            l.date || new Date().toISOString().slice(0, 10),
+        immatriculation: l.immatriculation || '',
+        conducteur:      l.conducteur      || '',
+        sangle:          l.sangle ? 'Oui' : 'Non',
+        sig_responsable: sigResp,
+        sig_conducteur:  sigCond,
+      });
+
+      logger.ok(`Contrôle véhicule : ${l.immatriculation} / ${l.conducteur}`);
+    }
+
+    res.json({ status: 'ok', count: lignes.length });
+  } catch (err) {
+    logger.err(`POST /api/controle-vehicule : ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
