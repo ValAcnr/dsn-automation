@@ -10,3 +10,4 @@ mapping_traites/
 .DS_Store
 config/pins.json
 config/app-pin.json
+.env
