@@ -291,6 +291,8 @@ async function main() {
   // 5. Persons ───────────────────────────────────────────────────────────────
   sep('5. GET /Persons');
 
+  let allPersons = [];
+
   {
     const url = `${BASE_API}/Persons`;
     process.stdout.write(`[GET] ${url} → `);
@@ -302,9 +304,9 @@ async function main() {
       if (ok) {
         try {
           const data = JSON.parse(raw);
-          const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.persons || [data]);
-          console.log(`\n✅ ${arr.length} personne(s)`);
-          arr.slice(0, 3).forEach((p, i) => {
+          allPersons = Array.isArray(data) ? data : (data.items || data.results || data.data || data.persons || [data]);
+          console.log(`\n✅ ${allPersons.length} personne(s)`);
+          allPersons.slice(0, 3).forEach((p, i) => {
             console.log(`\n--- Personne ${i + 1} (structure complète) ---`);
             console.log(JSON.stringify(p, null, 2));
           });
@@ -510,6 +512,69 @@ async function main() {
         }
       } catch (e) {
         console.log(`   Erreur lecture swagger : ${e.message}`);
+      }
+    }
+  }
+
+  // 9. Matching driver.registrationNumber → Persons.identificationNumber ───────
+  sep('9. MATCHING driver "0000000083" → Persons.identificationNumber');
+
+  {
+    const TARGET_ID = '0000000083';
+
+    if (allPersons.length === 0) {
+      console.log('   allPersons vide — étape 5 n\'a pas récupéré les données.');
+    } else {
+      console.log(`   Recherche dans ${allPersons.length} personnes…`);
+
+      // Recherche exacte par identificationNumber
+      const byId = allPersons.filter(p => {
+        const id = (p.identificationNumber || p.identification_number || p.badgeNumber || p.badge || '').toString();
+        return id === TARGET_ID;
+      });
+
+      if (byId.length > 0) {
+        console.log(`\n✅ ${byId.length} personne(s) avec identificationNumber === "${TARGET_ID}" :`);
+        byId.forEach((p, i) => {
+          console.log(`\n--- Résultat ${i + 1} (fiche complète) ---`);
+          console.log(JSON.stringify(p, null, 2));
+        });
+      } else {
+        console.log(`\n   Aucune correspondance exacte pour identificationNumber="${TARGET_ID}".`);
+
+        // Recherche souple : contient la valeur
+        const byIdLoose = allPersons.filter(p =>
+          JSON.stringify(p).includes(TARGET_ID)
+        );
+        if (byIdLoose.length > 0) {
+          console.log(`   ${byIdLoose.length} personne(s) contenant "${TARGET_ID}" quelque part :`);
+          byIdLoose.forEach((p, i) => {
+            console.log(`\n--- Résultat souple ${i + 1} ---`);
+            console.log(JSON.stringify(p, null, 2));
+          });
+        }
+
+        // Fallback : recherche par lastName === "THIBAULT"
+        console.log('\n   → Fallback : recherche par lastName === "THIBAULT"…');
+        const byName = allPersons.filter(p => {
+          const last = (p.lastName || p.lastname || p.familyName || p.name || p.nom || '').toString().toUpperCase();
+          return last === 'THIBAULT';
+        });
+
+        if (byName.length > 0) {
+          console.log(`\n✅ ${byName.length} personne(s) avec lastName "THIBAULT" :`);
+          byName.forEach((p, i) => {
+            console.log(`\n--- Résultat ${i + 1} ---`);
+            console.log(JSON.stringify(p, null, 2));
+          });
+        } else {
+          console.log('   Aucune correspondance par lastName "THIBAULT" non plus.');
+          // Affiche les champs dispo sur la première personne pour aider à déboguer
+          if (allPersons[0]) {
+            console.log('\n   Champs disponibles sur la première personne :');
+            console.log('   ' + Object.keys(allPersons[0]).join(', '));
+          }
+        }
       }
     }
   }
