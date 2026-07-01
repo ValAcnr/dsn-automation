@@ -310,6 +310,20 @@ app.post('/api/controle-vehicule', async (req, res) => {
   }
 });
 
+const VEHICULES_XLSX = path.join(__dirname, 'controle_vehicules.xlsx');
+
+app.get('/api/controle-vehicule/export', (req, res) => {
+  if (!fs.existsSync(VEHICULES_XLSX)) {
+    return res.status(404).json({ error: 'Aucun contrôle véhicule enregistré pour le moment.' });
+  }
+  res.download(VEHICULES_XLSX, 'controle_vehicules.xlsx', err => {
+    if (err && !res.headersSent) {
+      logger.err(`Export controle_vehicules.xlsx : ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
 });
