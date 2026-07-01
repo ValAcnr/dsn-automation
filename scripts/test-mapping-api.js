@@ -35,46 +35,6 @@ const TOKEN_CANDIDATES = [
   `${BASE_API}/token`,
 ];
 
-// ── Endpoints véhicules à tester ────────────────────────────────────────────
-const VEHICLE_CANDIDATES = [
-  '/api/v1/vehicles',
-  '/api/v2/vehicles',
-  '/api/v3/vehicles',
-  '/api/vehicles',
-  '/v1/vehicles',
-  '/vehicles',
-  '/api/v1/assets',
-  '/api/assets',
-  '/api/v1/fleets',
-];
-
-// ── Endpoints trajets à tester ───────────────────────────────────────────────
-function tripCandidates(vehicleId) {
-  const today    = new Date().toISOString().split('T')[0];
-  const weekAgo  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-
-  const perVehicle = vehicleId ? [
-    `/api/v1/vehicles/${vehicleId}/trips?from=${weekAgo}&to=${today}`,
-    `/api/v1/vehicles/${vehicleId}/trips?startDate=${weekAgo}&endDate=${today}`,
-    `/api/v1/vehicles/${vehicleId}/driving-time?from=${weekAgo}&to=${today}`,
-    `/api/v1/vehicles/${vehicleId}/journeys?from=${weekAgo}&to=${today}`,
-    `/api/v2/vehicles/${vehicleId}/trips?from=${weekAgo}&to=${today}`,
-  ] : [];
-
-  return [
-    ...perVehicle,
-    `/api/v1/trips?from=${weekAgo}&to=${today}`,
-    `/api/v2/trips?from=${weekAgo}&to=${today}`,
-    `/api/trips?from=${weekAgo}&to=${today}`,
-    `/api/v1/trips?startDate=${weekAgo}&endDate=${today}`,
-    `/api/v1/driving-time?from=${weekAgo}&to=${today}`,
-    `/api/v1/journeys?from=${weekAgo}&to=${today}`,
-    `/v1/trips?from=${weekAgo}&to=${today}`,
-    `/api/v1/trips?from=${monthAgo}&to=${today}`,
-  ];
-}
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function sep(title) {
   console.log('\n' + '═'.repeat(60));
@@ -84,7 +44,7 @@ function sep(title) {
 
 async function tryGet(fetch, url, headers) {
   try {
-    const r = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+    const r = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
     const raw = await r.text();
     return { ok: r.ok, status: r.status, raw };
   } catch (e) {
@@ -139,8 +99,8 @@ async function main() {
 
   const authHeaders = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
 
-  // 2. Swagger — découverte des endpoints ───────────────────────────────────
-  sep('2. SWAGGER / OPENAPI — découverte des endpoints');
+  // 2. Swagger — sauvegarde complète dans mapping-swagger.json ──────────────
+  sep('2. SWAGGER / OPENAPI — découverte et sauvegarde');
 
   const swaggerCandidates = [
     `${BASE_API}/swagger/v1/swagger.json`,
@@ -151,6 +111,9 @@ async function main() {
     `${BASE_API}/openapi/v1/openapi.json`,
   ];
 
+  const swaggerOut = path.join(__dirname, 'mapping-swagger.json');
+  let swaggerSpec  = null;
+
   for (const url of swaggerCandidates) {
     process.stdout.write(`[SWAGGER] ${url} → `);
     const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
@@ -158,101 +121,177 @@ async function main() {
     console.log(`HTTP ${status}`);
     if (ok) {
       try {
-        const spec = JSON.parse(raw);
-        const paths = Object.keys(spec.paths || {}).sort();
-        console.log(`✅ ${paths.length} paths trouvés :`);
+        swaggerSpec = JSON.parse(raw);
+        fs.writeFileSync(swaggerOut, JSON.stringify(swaggerSpec, null, 2), 'utf8');
+        console.log(`✅ Swagger sauvegardé → ${swaggerOut}`);
+        const paths = Object.keys(swaggerSpec.paths || {}).sort();
+        console.log(`   ${paths.length} paths disponibles :`);
         paths.forEach(p => {
-          const methods = Object.keys(spec.paths[p]).join(', ').toUpperCase();
+          const methods = Object.keys(swaggerSpec.paths[p]).join(', ').toUpperCase();
           console.log(`   [${methods}] ${p}`);
         });
       } catch {
-        console.log(`   Contenu non-JSON (${raw.length} chars) : ${raw.slice(0, 200)}`);
+        console.log(`   Contenu non-JSON (${raw.length} chars)`);
+        fs.writeFileSync(swaggerOut + '.raw', raw, 'utf8');
+        console.log(`   Brut sauvegardé → ${swaggerOut}.raw`);
       }
       break;
+    } else {
+      console.log(`   ${raw.slice(0, 200)}`);
     }
   }
 
-  // 3. Endpoints véhicules ────────────────────────────────────────────────────
-  sep('3. LISTE DES VÉHICULES');
+  // Lecture des params swagger pour /Geolocation/Trips
+  let tripQueryParams = null;
+  if (swaggerSpec && swaggerSpec.paths) {
+    const tripPath = Object.keys(swaggerSpec.paths).find(p =>
+      p.toLowerCase().includes('geolocation') && p.toLowerCase().includes('trip')
+    );
+    if (tripPath) {
+      const getOp = swaggerSpec.paths[tripPath].get;
+      if (getOp && getOp.parameters) {
+        tripQueryParams = getOp.parameters.map(p => ({ name: p.name, in: p.in, required: p.required }));
+        console.log(`\n   Params swagger pour ${tripPath} :`);
+        tripQueryParams.forEach(p => console.log(`     ${p.required ? '*' : ' '} ${p.name} (${p.in})`));
+      }
+    }
+  }
 
-  let vehicleId = null;
+  // 3. VehicleAssignments/current ────────────────────────────────────────────
+  sep('3. GET /VehicleAssignments/current');
 
-  for (const ep of VEHICLE_CANDIDATES) {
-    const url = `${BASE_API}${ep}`;
-    process.stdout.write(`[VEHICLES] GET ${url} → `);
+  {
+    const url = `${BASE_API}/VehicleAssignments/current`;
+    process.stdout.write(`[GET] ${url} → `);
     const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
-    if (err) { console.log(`ERREUR : ${err}`); continue; }
-    console.log(`HTTP ${status}`);
-    if (ok) {
-      try {
-        const data = JSON.parse(raw);
-        const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.vehicles || [data]);
-        console.log(`\n✅ Véhicules à ${ep} — ${arr.length} entrées`);
-        if (arr.length > 0) {
-          const first = arr[0];
-          vehicleId = first.id ?? first.vehicleId ?? first.identifier ?? first.immatriculation ?? null;
-          console.log(`\n--- Premier véhicule (tous champs) ---`);
-          console.log(JSON.stringify(first, null, 2));
+    if (err) {
+      console.log(`ERREUR : ${err}`);
+    } else {
+      console.log(`HTTP ${status}`);
+      if (ok) {
+        try {
+          const data = JSON.parse(raw);
+          const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || [data]);
+          console.log(`\n✅ ${arr.length} assignation(s)`);
+          console.log('\n--- Premier élément (structure complète) ---');
+          console.log(JSON.stringify(arr[0] ?? data, null, 2));
           if (arr.length > 1) {
-            console.log(`\n--- Deuxième véhicule ---`);
+            console.log('\n--- Deuxième élément ---');
             console.log(JSON.stringify(arr[1], null, 2));
           }
-        } else {
-          console.log('--- Réponse complète ---');
-          console.log(JSON.stringify(data, null, 2));
+        } catch {
+          console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
         }
-        console.log(`\n   → vehicleId retenu pour les trajets : ${vehicleId}`);
-      } catch {
-        console.log(`   Réponse brute : ${raw.slice(0, 400)}`);
+      } else {
+        console.log(`   ${raw.slice(0, 400)}`);
       }
-      break;
-    } else {
-      console.log(`   ${raw.slice(0, 200)}`);
     }
   }
 
-  // 4. Endpoints trajets ─────────────────────────────────────────────────────
-  sep('4. TRAJETS / CONDUITE');
+  // 4. Persons ───────────────────────────────────────────────────────────────
+  sep('4. GET /Persons');
 
-  for (const ep of tripCandidates(vehicleId)) {
-    const url = `${BASE_API}${ep}`;
-    process.stdout.write(`[TRIPS] GET ${url} → `);
+  {
+    const url = `${BASE_API}/Persons`;
+    process.stdout.write(`[GET] ${url} → `);
     const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
-    if (err) { console.log(`ERREUR : ${err}`); continue; }
-    console.log(`HTTP ${status}`);
-    if (ok) {
-      try {
-        const data = JSON.parse(raw);
-        const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.trips || data.journeys || []);
-        console.log(`\n✅ Trajets à ${ep} — ${arr.length} entrée(s)`);
-        if (arr.length > 0) {
-          console.log('\n--- Premier trajet (tous champs) ---');
-          console.log(JSON.stringify(arr[0], null, 2));
-        } else {
-          console.log('--- Réponse complète (vide ou structure différente) ---');
-          console.log(JSON.stringify(data, null, 2));
-        }
-        console.log('\n--- Champs clés présents ? ---');
-        const sample = arr[0] || data;
-        const keys   = sample ? Object.keys(sample) : [];
-        console.log(`   Champs disponibles : ${keys.join(', ')}`);
-        ['driver', 'conducteur', 'driverId', 'driverName', 'userId',
-         'duration', 'drivingTime', 'amplitude', 'distance', 'km',
-         'startDate', 'endDate', 'date', 'vehicle', 'vehicleId', 'plate']
-          .forEach(k => {
-            const found = keys.find(key => key.toLowerCase().includes(k.toLowerCase()));
-            if (found) console.log(`   ✓ "${found}" = ${JSON.stringify(sample[found])}`);
-          });
-      } catch {
-        console.log(`   Réponse brute : ${raw.slice(0, 400)}`);
-      }
-      break;
+    if (err) {
+      console.log(`ERREUR : ${err}`);
     } else {
-      console.log(`   ${raw.slice(0, 200)}`);
+      console.log(`HTTP ${status}`);
+      if (ok) {
+        try {
+          const data = JSON.parse(raw);
+          const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.persons || [data]);
+          console.log(`\n✅ ${arr.length} personne(s)`);
+          const preview = arr.slice(0, 3);
+          preview.forEach((p, i) => {
+            console.log(`\n--- Personne ${i + 1} (structure complète) ---`);
+            console.log(JSON.stringify(p, null, 2));
+          });
+        } catch {
+          console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
+        }
+      } else {
+        console.log(`   ${raw.slice(0, 400)}`);
+      }
+    }
+  }
+
+  // 5. Geolocation/Trips ─────────────────────────────────────────────────────
+  sep('5. GET /Geolocation/Trips');
+
+  {
+    const today    = new Date().toISOString().split('T')[0];
+    const weekAgo  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+
+    // Construit les query params en lisant le swagger si disponible,
+    // sinon tente les variantes les plus communes
+    const paramVariants = [
+      // Format ISO dates (le plus courant dans ce type d'API)
+      `startDate=${weekAgo}&endDate=${today}`,
+      `from=${weekAgo}&to=${today}`,
+      `dateDebut=${weekAgo}&dateFin=${today}`,
+      `StartDate=${weekAgo}&EndDate=${today}`,
+      `FromDate=${weekAgo}&ToDate=${today}`,
+    ];
+
+    let found = false;
+    for (const params of paramVariants) {
+      const url = `${BASE_API}/Geolocation/Trips?${params}`;
+      process.stdout.write(`[GET] ${url} → `);
+      const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
+      if (err) { console.log(`ERREUR : ${err}`); continue; }
+      console.log(`HTTP ${status}`);
+      if (ok) {
+        try {
+          const data = JSON.parse(raw);
+          const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.trips || []);
+          console.log(`\n✅ ${arr.length} trajet(s) avec params : ${params}`);
+          if (arr.length > 0) {
+            console.log('\n--- Premier trajet (structure complète) ---');
+            console.log(JSON.stringify(arr[0], null, 2));
+            console.log('\n--- Champs clés présents ? ---');
+            const sample = arr[0];
+            const keys   = Object.keys(sample);
+            console.log(`   Tous les champs : ${keys.join(', ')}`);
+            ['driver', 'conducteur', 'driverId', 'driverName', 'personId', 'userId',
+             'duration', 'drivingTime', 'amplitude', 'distance', 'km',
+             'startDate', 'endDate', 'date', 'vehicle', 'vehicleId',
+             'registrationNumber', 'plate', 'immatriculation']
+              .forEach(k => {
+                const found = keys.find(key => key.toLowerCase().includes(k.toLowerCase()));
+                if (found) console.log(`   ✓ "${found}" = ${JSON.stringify(sample[found])}`);
+              });
+          } else {
+            console.log('--- Réponse complète (tableau vide ou structure différente) ---');
+            console.log(JSON.stringify(data, null, 2));
+          }
+        } catch {
+          console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
+        }
+        found = true;
+        break;
+      } else {
+        console.log(`   ${raw.slice(0, 300)}`);
+      }
+    }
+
+    if (!found) {
+      console.log('\n⚠️  Aucun variant de params n\'a fonctionné pour /Geolocation/Trips');
+      // Essai sans params
+      const url = `${BASE_API}/Geolocation/Trips`;
+      process.stdout.write(`[GET] ${url} (sans params) → `);
+      const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
+      if (err) { console.log(`ERREUR : ${err}`); }
+      else {
+        console.log(`HTTP ${status}  ${raw.slice(0, 400)}`);
+      }
     }
   }
 
   sep('FIN EXPLORATION');
+  console.log(`\nSwagger complet : scripts/mapping-swagger.json`);
 }
 
 main().catch(e => {
