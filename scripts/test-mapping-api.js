@@ -332,29 +332,26 @@ async function main() {
     } // fin if (activeReg)
   }
 
-  // 7. Geolocation/Trips — 24h max, hier, ciblé sur le véhicule actif ────────
-  sep(`7. GET /Geolocation/Trips — hier, registrationNumber=${activeReg || '(inconnu)'}`);
+  // 7. Geolocation/Trips — CR-860-YB, hier, tous les trajets ─────────────────
+  const TRIPS_REG = 'CR-860-YB';   // véhicule connu pour avoir des trajets
+  sep(`7. GET /Geolocation/Trips — hier, registrationNumber=${TRIPS_REG} (tous les trajets)`);
 
   {
-    // Hier 00:00:00 → aujourd'hui 00:00:00 (fenêtre 24h exacte)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
-    const startDate = yesterday.toISOString().replace(/\.\d{3}Z$/, '');   // sans ms
+    const startDate = yesterday.toISOString().replace(/\.\d{3}Z$/, '');
     const endDate   = new Date(yesterday.getTime() + 24 * 3600 * 1000)
                         .toISOString().replace(/\.\d{3}Z$/, '');
+    const regEnc    = encodeURIComponent(TRIPS_REG);
 
     console.log(`   Fenêtre : ${startDate} → ${endDate}`);
-    if (!activeReg) { console.log('   (skippé — pas de véhicule actif)'); return; }
 
-    const regEnc = encodeURIComponent(activeReg);
-    // Variantes de params dans l'ordre de probabilité pour cette API
     const paramVariants = [
       `startDate=${startDate}&endDate=${endDate}&registrationNumber=${regEnc}`,
       `startDate=${startDate}&endDate=${endDate}`,
       `from=${startDate}&to=${endDate}&registrationNumber=${regEnc}`,
       `from=${startDate}&to=${endDate}`,
-      // Dates seules (format YYYY-MM-DD) au cas où l'API rejette les datetimes complets
       `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}&registrationNumber=${regEnc}`,
       `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}`,
     ];
@@ -372,11 +369,24 @@ async function main() {
           const arr  = Array.isArray(data)
             ? data
             : (data.items || data.results || data.data || data.trips || data.journeys || []);
-          console.log(`\n✅ ${arr.length} trajet(s)  [params: ${params.split('&').slice(-2).join('&')}…]`);
+          console.log(`\n✅ ${arr.length} trajet(s)`);
+
           if (arr.length > 0) {
+            // Structure complète du premier trajet (référence)
             console.log('\n--- Premier trajet (structure complète) ---');
             console.log(JSON.stringify(arr[0], null, 2));
-            printKeyFields(arr[0]);
+
+            // Résumé de tous les trajets : driver + startPoint.date + duration
+            console.log(`\n--- Résumé de tous les trajets (driver / startPoint.date / duration) ---`);
+            arr.forEach((t, i) => {
+              const driver   = t.driver !== undefined ? JSON.stringify(t.driver) : '(champ absent)';
+              const date     = t.startPoint?.date ?? t.startDate ?? t.date ?? '(absent)';
+              const duration = t.duration ?? t.drivingTime ?? t.durationSeconds ?? '(absent)';
+              console.log(`   ${String(i + 1).padStart(2)}. driver=${driver}  date=${date}  duration=${duration}`);
+            });
+
+            const withDriver = arr.filter(t => t.driver !== null && t.driver !== undefined);
+            console.log(`\n   → ${withDriver.length}/${arr.length} trajet(s) avec driver non-null`);
           } else {
             console.log('   (tableau vide — réponse complète :)');
             console.log(JSON.stringify(data, null, 2));
@@ -393,12 +403,90 @@ async function main() {
 
     if (!found) {
       console.log('\n⚠️  Aucun variant de params n\'a fonctionné.');
-      // Dernier recours : sans aucun param
       const url = `${BASE_API}/Geolocation/Trips`;
       process.stdout.write(`[GET] ${url} (sans params) → `);
       const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
       if (err) { console.log(`ERREUR : ${err}`); }
       else      { console.log(`HTTP ${status}  ${raw.slice(0, 400)}`); }
+    }
+  }
+
+  // 8. Schéma swagger du champ "driver" dans /Geolocation/Trips ──────────────
+  sep('8. SWAGGER SCHEMA — champ "driver" dans /Geolocation/Trips');
+
+  {
+    const swaggerPath = path.join(__dirname, 'mapping-swagger.json');
+    if (!fs.existsSync(swaggerPath)) {
+      console.log('   mapping-swagger.json absent — relancer le script pour le générer.');
+    } else {
+      try {
+        const spec = JSON.parse(fs.readFileSync(swaggerPath, 'utf8'));
+
+        // Trouve le path /Geolocation/Trips (insensible à la casse)
+        const tripPath = Object.keys(spec.paths || {}).find(p =>
+          p.toLowerCase().includes('geolocation') && p.toLowerCase().includes('trip')
+        );
+        if (!tripPath) {
+          console.log('   Aucun path /Geolocation/Trips dans le swagger.');
+        } else {
+          console.log(`   Path trouvé : ${tripPath}`);
+          const getOp = spec.paths[tripPath].get || {};
+
+          // Params query
+          if (getOp.parameters?.length) {
+            console.log('\n   Paramètres query :');
+            getOp.parameters.forEach(p =>
+              console.log(`     ${p.required ? '*' : ' '} ${p.name} (${p.in}) — ${p.description || p.schema?.type || ''}`)
+            );
+          }
+
+          // Schéma de réponse 200
+          const resp200 = getOp.responses?.['200'] || getOp.responses?.['default'];
+          let schemaRef = resp200?.content?.['application/json']?.schema
+                       || resp200?.schema;
+
+          // Résout $ref si besoin
+          function resolveRef(ref, root) {
+            if (!ref || !ref.startsWith('#/')) return null;
+            return ref.slice(2).split('/').reduce((o, k) => o?.[k], root);
+          }
+
+          if (schemaRef?.$ref) schemaRef = resolveRef(schemaRef.$ref, spec);
+
+          // Cas tableau : items peut être le vrai schéma
+          if (schemaRef?.type === 'array' && schemaRef.items) {
+            const items = schemaRef.items;
+            schemaRef = items.$ref ? resolveRef(items.$ref, spec) : items;
+          }
+
+          if (!schemaRef) {
+            console.log('\n   Impossible de résoudre le schéma de réponse.');
+          } else {
+            const props = schemaRef.properties || {};
+            console.log(`\n   Schéma de réponse résolu : ${schemaRef.title || schemaRef['x-schemaName'] || '(anonyme)'}`);
+            console.log(`   Champs disponibles : ${Object.keys(props).join(', ')}`);
+
+            // Champ driver
+            const driverProp = props['driver'] || props['Driver'];
+            if (driverProp) {
+              const resolved = driverProp.$ref ? resolveRef(driverProp.$ref, spec) : driverProp;
+              console.log('\n   --- Définition du champ "driver" ---');
+              console.log(JSON.stringify(resolved, null, 2));
+            } else {
+              console.log('\n   Champ "driver" absent des properties du schéma.');
+              // Recherche large dans tout le swagger
+              const raw = JSON.stringify(spec);
+              const idx = raw.toLowerCase().indexOf('"driver"');
+              if (idx !== -1) {
+                console.log(`   Occurrence de "driver" dans le swagger brut (contexte) :`);
+                console.log('   ' + raw.slice(Math.max(0, idx - 80), idx + 200));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`   Erreur lecture swagger : ${e.message}`);
+      }
     }
   }
 
