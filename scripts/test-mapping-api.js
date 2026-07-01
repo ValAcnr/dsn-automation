@@ -19,6 +19,9 @@ const CLIENT_ID     = process.env.MAPPING_CLIENT_ID;
 const CLIENT_SECRET = process.env.MAPPING_CLIENT_SECRET;
 const BASE_API      = 'https://apicore-preprod.optimum-automotive.com';
 
+// Véhicule cible pour les tests unitaires
+const REG = 'EW-266-YQ';
+
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error('❌ MAPPING_CLIENT_ID / MAPPING_CLIENT_SECRET manquants dans .env');
   process.exit(1);
@@ -52,13 +55,29 @@ async function tryGet(fetch, url, headers) {
   }
 }
 
+function printKeyFields(sample) {
+  if (!sample || typeof sample !== 'object') return;
+  const keys = Object.keys(sample);
+  console.log(`\n   Tous les champs : ${keys.join(', ')}`);
+  ['driver', 'conducteur', 'driverId', 'driverName', 'driverIdentificationNumber',
+   'personId', 'userId', 'identificationNumber',
+   'duration', 'drivingTime', 'amplitude', 'distance', 'km',
+   'startDate', 'endDate', 'date', 'vehicle', 'vehicleId',
+   'registrationNumber', 'plate', 'immatriculation', 'currentDriver']
+    .forEach(k => {
+      const found = keys.find(key => key.toLowerCase().includes(k.toLowerCase()));
+      if (found) console.log(`   ✓ "${found}" = ${JSON.stringify(sample[found])}`);
+    });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
   const { default: fetch } = await import('node-fetch');
 
   console.log('DSN TRANSPORTS — Exploration API Mapping Control (Optimum Automotive)');
   console.log(`CLIENT_ID : ${CLIENT_ID}`);
-  console.log(`BASE_API  : ${BASE_API}\n`);
+  console.log(`BASE_API  : ${BASE_API}`);
+  console.log(`Véhicule cible : ${REG}\n`);
 
   // 1. Obtenir le token OAuth2 ───────────────────────────────────────────────
   sep('1. AUTHENTIFICATION OAuth2 client_credentials');
@@ -141,27 +160,11 @@ async function main() {
     }
   }
 
-  // Lecture des params swagger pour /Geolocation/Trips
-  let tripQueryParams = null;
-  if (swaggerSpec && swaggerSpec.paths) {
-    const tripPath = Object.keys(swaggerSpec.paths).find(p =>
-      p.toLowerCase().includes('geolocation') && p.toLowerCase().includes('trip')
-    );
-    if (tripPath) {
-      const getOp = swaggerSpec.paths[tripPath].get;
-      if (getOp && getOp.parameters) {
-        tripQueryParams = getOp.parameters.map(p => ({ name: p.name, in: p.in, required: p.required }));
-        console.log(`\n   Params swagger pour ${tripPath} :`);
-        tripQueryParams.forEach(p => console.log(`     ${p.required ? '*' : ' '} ${p.name} (${p.in})`));
-      }
-    }
-  }
-
-  // 3. VehicleAssignments/current ────────────────────────────────────────────
-  sep('3. GET /VehicleAssignments/current');
+  // 3. VehicleAssignments/current (avec registrationNumber) ─────────────────
+  sep(`3. GET /VehicleAssignments/current?registrationNumber=${REG}`);
 
   {
-    const url = `${BASE_API}/VehicleAssignments/current`;
+    const url = `${BASE_API}/VehicleAssignments/current?registrationNumber=${encodeURIComponent(REG)}`;
     process.stdout.write(`[GET] ${url} → `);
     const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
     if (err) {
@@ -173,17 +176,38 @@ async function main() {
           const data = JSON.parse(raw);
           const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || [data]);
           console.log(`\n✅ ${arr.length} assignation(s)`);
-          console.log('\n--- Premier élément (structure complète) ---');
-          console.log(JSON.stringify(arr[0] ?? data, null, 2));
-          if (arr.length > 1) {
-            console.log('\n--- Deuxième élément ---');
-            console.log(JSON.stringify(arr[1], null, 2));
-          }
+          arr.slice(0, 3).forEach((item, i) => {
+            console.log(`\n--- Assignation ${i + 1} (structure complète) ---`);
+            console.log(JSON.stringify(item, null, 2));
+          });
+          printKeyFields(arr[0] ?? data);
         } catch {
-          console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
+          console.log(`   Réponse brute : ${raw.slice(0, 800)}`);
         }
       } else {
+        // Si 400/404 avec registrationNumber, retenter sans filtre
         console.log(`   ${raw.slice(0, 400)}`);
+        console.log('\n   → Nouvelle tentative sans filtre registrationNumber…');
+        const { ok: ok2, status: s2, raw: r2, err: e2 } = await tryGet(
+          fetch, `${BASE_API}/VehicleAssignments/current`, authHeaders
+        );
+        if (e2) { console.log(`   ERREUR : ${e2}`); }
+        else {
+          console.log(`   HTTP ${s2}`);
+          if (ok2) {
+            try {
+              const data = JSON.parse(r2);
+              const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || [data]);
+              console.log(`   ✅ ${arr.length} assignation(s) (sans filtre)`);
+              arr.slice(0, 2).forEach((item, i) => {
+                console.log(`\n--- Assignation ${i + 1} ---`);
+                console.log(JSON.stringify(item, null, 2));
+              });
+            } catch { console.log(`   Brut : ${r2.slice(0, 400)}`); }
+          } else {
+            console.log(`   ${r2.slice(0, 400)}`);
+          }
+        }
       }
     }
   }
@@ -204,8 +228,7 @@ async function main() {
           const data = JSON.parse(raw);
           const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.persons || [data]);
           console.log(`\n✅ ${arr.length} personne(s)`);
-          const preview = arr.slice(0, 3);
-          preview.forEach((p, i) => {
+          arr.slice(0, 3).forEach((p, i) => {
             console.log(`\n--- Personne ${i + 1} (structure complète) ---`);
             console.log(JSON.stringify(p, null, 2));
           });
@@ -218,22 +241,66 @@ async function main() {
     }
   }
 
-  // 5. Geolocation/Trips ─────────────────────────────────────────────────────
-  sep('5. GET /Geolocation/Trips');
+  // 5. Vehicles/{registrationNumber} ─────────────────────────────────────────
+  sep(`5. GET /Vehicles/${REG} — fiche véhicule individuelle`);
 
   {
-    const today    = new Date().toISOString().split('T')[0];
-    const weekAgo  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+    const url = `${BASE_API}/Vehicles/${encodeURIComponent(REG)}`;
+    process.stdout.write(`[GET] ${url} → `);
+    const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
+    if (err) {
+      console.log(`ERREUR : ${err}`);
+    } else {
+      console.log(`HTTP ${status}`);
+      if (ok) {
+        try {
+          const data = JSON.parse(raw);
+          console.log('\n--- Fiche véhicule (structure complète) ---');
+          console.log(JSON.stringify(data, null, 2));
+          printKeyFields(data);
+        } catch {
+          console.log(`   Réponse brute : ${raw.slice(0, 600)}`);
+        }
+      } else {
+        console.log(`   ${raw.slice(0, 400)}`);
+        // Essai avec le registrationNumber en query param au lieu de path param
+        console.log(`\n   → Tentative en query param : /Vehicles?registrationNumber=${REG}`);
+        const { ok: ok2, status: s2, raw: r2, err: e2 } = await tryGet(
+          fetch,
+          `${BASE_API}/Vehicles?registrationNumber=${encodeURIComponent(REG)}`,
+          authHeaders
+        );
+        if (e2) { console.log(`   ERREUR : ${e2}`); }
+        else {
+          console.log(`   HTTP ${s2}  ${r2.slice(0, 400)}`);
+        }
+      }
+    }
+  }
 
-    // Construit les query params en lisant le swagger si disponible,
-    // sinon tente les variantes les plus communes
+  // 6. Geolocation/Trips — 24h max, hier, ciblé sur EW-266-YQ ──────────────
+  sep(`6. GET /Geolocation/Trips — hier, registrationNumber=${REG}`);
+
+  {
+    // Hier 00:00:00 → aujourd'hui 00:00:00 (fenêtre 24h exacte)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const startDate = yesterday.toISOString().replace(/\.\d{3}Z$/, '');   // sans ms
+    const endDate   = new Date(yesterday.getTime() + 24 * 3600 * 1000)
+                        .toISOString().replace(/\.\d{3}Z$/, '');
+
+    console.log(`   Fenêtre : ${startDate} → ${endDate}`);
+
+    // Variantes de params dans l'ordre de probabilité pour cette API
     const paramVariants = [
-      // Format ISO dates (le plus courant dans ce type d'API)
-      `startDate=${weekAgo}&endDate=${today}`,
-      `from=${weekAgo}&to=${today}`,
-      `dateDebut=${weekAgo}&dateFin=${today}`,
-      `StartDate=${weekAgo}&EndDate=${today}`,
-      `FromDate=${weekAgo}&ToDate=${today}`,
+      `startDate=${startDate}&endDate=${endDate}&registrationNumber=${encodeURIComponent(REG)}`,
+      `startDate=${startDate}&endDate=${endDate}`,
+      `from=${startDate}&to=${endDate}&registrationNumber=${encodeURIComponent(REG)}`,
+      `from=${startDate}&to=${endDate}`,
+      // Dates seules (format YYYY-MM-DD) au cas où l'API rejette les datetimes complets
+      `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}&registrationNumber=${encodeURIComponent(REG)}`,
+      `startDate=${startDate.split('T')[0]}&endDate=${endDate.split('T')[0]}`,
     ];
 
     let found = false;
@@ -246,25 +313,16 @@ async function main() {
       if (ok) {
         try {
           const data = JSON.parse(raw);
-          const arr  = Array.isArray(data) ? data : (data.items || data.results || data.data || data.trips || []);
-          console.log(`\n✅ ${arr.length} trajet(s) avec params : ${params}`);
+          const arr  = Array.isArray(data)
+            ? data
+            : (data.items || data.results || data.data || data.trips || data.journeys || []);
+          console.log(`\n✅ ${arr.length} trajet(s)  [params: ${params.split('&').slice(-2).join('&')}…]`);
           if (arr.length > 0) {
             console.log('\n--- Premier trajet (structure complète) ---');
             console.log(JSON.stringify(arr[0], null, 2));
-            console.log('\n--- Champs clés présents ? ---');
-            const sample = arr[0];
-            const keys   = Object.keys(sample);
-            console.log(`   Tous les champs : ${keys.join(', ')}`);
-            ['driver', 'conducteur', 'driverId', 'driverName', 'personId', 'userId',
-             'duration', 'drivingTime', 'amplitude', 'distance', 'km',
-             'startDate', 'endDate', 'date', 'vehicle', 'vehicleId',
-             'registrationNumber', 'plate', 'immatriculation']
-              .forEach(k => {
-                const found = keys.find(key => key.toLowerCase().includes(k.toLowerCase()));
-                if (found) console.log(`   ✓ "${found}" = ${JSON.stringify(sample[found])}`);
-              });
+            printKeyFields(arr[0]);
           } else {
-            console.log('--- Réponse complète (tableau vide ou structure différente) ---');
+            console.log('   (tableau vide — réponse complète :)');
             console.log(JSON.stringify(data, null, 2));
           }
         } catch {
@@ -278,15 +336,13 @@ async function main() {
     }
 
     if (!found) {
-      console.log('\n⚠️  Aucun variant de params n\'a fonctionné pour /Geolocation/Trips');
-      // Essai sans params
+      console.log('\n⚠️  Aucun variant de params n\'a fonctionné.');
+      // Dernier recours : sans aucun param
       const url = `${BASE_API}/Geolocation/Trips`;
       process.stdout.write(`[GET] ${url} (sans params) → `);
       const { ok, status, raw, err } = await tryGet(fetch, url, authHeaders);
       if (err) { console.log(`ERREUR : ${err}`); }
-      else {
-        console.log(`HTTP ${status}  ${raw.slice(0, 400)}`);
-      }
+      else      { console.log(`HTTP ${status}  ${raw.slice(0, 400)}`); }
     }
   }
 
