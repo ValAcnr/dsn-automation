@@ -74,7 +74,7 @@
     /* ── Stat cards ─────────────────────────────────── */
     .stats {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -86,14 +86,16 @@
       box-shadow: var(--shadow);
       border-left: 4px solid var(--navy);
     }
-    .stat-card.card-alertes  { border-left-color: var(--orange); }
-    .stat-card.card-attente  { border-left-color: var(--gray-400); }
+    .stat-card.card-alertes    { border-left-color: var(--orange); }
+    .stat-card.card-attente    { border-left-color: var(--gray-400); }
+    .stat-card.card-carburant  { border-left-color: var(--red); }
 
     .stat-value {
       font-size: 38px; font-weight: 700; color: var(--navy); line-height: 1;
     }
-    .stat-card.card-alertes .stat-value { color: var(--orange); }
-    .stat-card.card-attente .stat-value { color: var(--gray-600); }
+    .stat-card.card-alertes   .stat-value { color: var(--orange); }
+    .stat-card.card-attente   .stat-value { color: var(--gray-600); }
+    .stat-card.card-carburant .stat-value { color: var(--red); }
 
     .stat-label { font-size: 12px; color: var(--gray-600); margin-top: 6px; }
 
@@ -271,13 +273,11 @@
     /* ── Responsive ─────────────────────────────────── */
     @media (max-width: 900px) {
       .stats { grid-template-columns: 1fr 1fr; }
-      .stats .stat-card:last-child { grid-column: span 2; }
     }
     @media (max-width: 640px) {
       .header { padding: 0 16px; }
       .main   { padding: 14px; }
       .stats  { grid-template-columns: 1fr; }
-      .stats .stat-card:last-child { grid-column: auto; }
       .toolbar { flex-direction: column; align-items: stretch; }
       .toolbar-right { flex-direction: column; }
       input.ctrl, select.ctrl { width: 100%; }
@@ -318,6 +318,10 @@
       <div class="stat-value" id="stat-attente">—</div>
       <div class="stat-label">Fiches en attente</div>
     </div>
+    <div class="stat-card card-carburant">
+      <div class="stat-value" id="stat-carburant">—</div>
+      <div class="stat-label">Alertes carburant</div>
+    </div>
   </div>
 
   <!-- Toolbar -->
@@ -334,6 +338,23 @@
   <!-- Table -->
   <div class="table-wrapper">
     <div id="table-container" class="placeholder">Chargement…</div>
+  </div>
+
+  <!-- Alertes carburant -->
+  <div class="pdfs-section" style="margin-top:24px">
+    <div class="toolbar">
+      <div class="section-title">Alertes carburant carte</div>
+      <div class="toolbar-right">
+        <label class="btn btn-ghost" style="cursor:pointer">
+          &#x1F4E4; Importer fichier Total (.xlsx)
+          <input type="file" id="carburant-upload" accept=".xls,.xlsx" style="display:none">
+        </label>
+      </div>
+    </div>
+    <div id="carburant-status" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500;margin:8px 0"></div>
+    <div class="table-wrapper">
+      <div id="carburant-container" class="placeholder">Aucun fichier importé. Utilisez le bouton pour importer un export cartes carburant Total.</div>
+    </div>
   </div>
 
   <!-- Contrôles véhicules -->
@@ -789,9 +810,121 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
 });
 
+/* ── Carburant ──────────────────────────────────────── */
+function arrayBufferToBase64(buf) {
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+function setCarburantStatus(msg, type) {
+  const el = document.getElementById('carburant-status');
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = type === 'ok' ? '#f0fdf4' : type === 'err' ? '#fef2f2' : '#eff6ff';
+  el.style.color      = type === 'ok' ? '#166534' : type === 'err' ? '#991b1b' : '#1e40af';
+  el.style.border     = `1px solid ${type === 'ok' ? '#bbf7d0' : type === 'err' ? '#fecaca' : '#bfdbfe'}`;
+}
+
+function renderCarburant(rows) {
+  const container = document.getElementById('carburant-container');
+  if (!rows || !rows.length) {
+    container.innerHTML = '<div class="placeholder">Aucune transaction valide trouvée.</div>';
+    return;
+  }
+
+  // Alertes en tête, puis OK
+  const sorted = [...rows].sort((a, b) => (b.alertes?.length || 0) - (a.alertes?.length || 0));
+
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th>Immatriculation</th><th>Conducteur</th><th>Date</th><th>Heure</th>
+    <th>Produit</th><th>Litres</th><th>Montant HT</th><th>Ville</th><th>Alertes</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+  sorted.forEach(r => {
+    const haAlert = r.alertes?.length > 0;
+    const alerteBadges = (r.alertes || []).map(a => {
+      const cls = a.code === 'HORS_ROULAGE' ? 'badge-critique' : 'badge-attention';
+      return `<span class="badge ${cls}" title="${esc(a.detail || '')}">${esc(a.label)}</span>`;
+    }).join(' ');
+
+    const tr = document.createElement('tr');
+    if (haAlert) tr.style.background = '#fff7ed';
+    tr.innerHTML = `
+      <td class="name-cell">${esc(r.immatriculation || '')}</td>
+      <td>${esc(r.conducteur || '')}</td>
+      <td>${esc(r.date || '')}</td>
+      <td>${esc(r.heure || '')}</td>
+      <td>${esc(r.produit || '')}</td>
+      <td class="num">${r.litres != null ? r.litres.toFixed(1) + ' L' : '—'}</td>
+      <td class="num">${r.montant_ht != null ? r.montant_ht.toFixed(2) + ' €' : '—'}</td>
+      <td>${esc(r.ville || '')}</td>
+      <td style="white-space:nowrap">${alerteBadges || '<span style="color:var(--gray-400);font-size:11px">OK</span>'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbl.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(tbl);
+}
+
+async function loadCarburant() {
+  try {
+    const r = await fetch('/api/carburant/alertes');
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (rows.length) {
+      renderCarburant(rows);
+      const nb = rows.filter(r => r.alertes?.length > 0).length;
+      document.getElementById('stat-carburant').textContent = nb;
+    }
+  } catch { /* pas de données carburant — silencieux */ }
+}
+
+document.getElementById('carburant-upload').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+  this.value = '';
+
+  setCarburantStatus('⏳ Analyse en cours (peut prendre quelques minutes si l\'API Mapping est sollicitée)…', 'info');
+  document.getElementById('carburant-container').innerHTML =
+    '<div class="placeholder">Analyse en cours…</div>';
+
+  try {
+    const buf = await file.arrayBuffer();
+    const b64 = arrayBufferToBase64(buf);
+
+    const r = await fetch('/api/carburant/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, data_base64: b64 }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+
+    setCarburantStatus(
+      `✓ ${j.count} transactions importées — ${j.alertes} avec alertes`,
+      j.alertes > 0 ? 'err' : 'ok'
+    );
+    renderCarburant(j.transactions || []);
+    document.getElementById('stat-carburant').textContent = j.alertes;
+  } catch (e) {
+    setCarburantStatus('❌ Erreur : ' + e.message, 'err');
+    document.getElementById('carburant-container').innerHTML =
+      `<div class="placeholder"><strong>Erreur</strong>${esc(e.message)}</div>`;
+  }
+});
+
 /* ── Boot ──────────────────────────────────────────── */
 load();
 loadVehicules();
+loadCarburant();
 setInterval(load, 60_000);
 </script>
 </body>

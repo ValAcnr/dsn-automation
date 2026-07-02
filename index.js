@@ -10,9 +10,11 @@ const parserFacture = require('./modules/parser-facture');
 const parserMapping = require('./modules/parser-mapping');
 const logger        = require('./modules/logger');
 const calcul          = require('./modules/calcul-controles');
-const excelVehicules   = require('./modules/excel-vehicules');
-const excelVehiculesV2 = require('./modules/excel-vehicules-v2');
-const gpsMatcher       = require('./modules/gps-matcher');
+const excelVehicules    = require('./modules/excel-vehicules');
+const excelVehiculesV2  = require('./modules/excel-vehicules-v2');
+const gpsMatcher        = require('./modules/gps-matcher');
+const parserCarburant   = require('./modules/parser-carburant');
+const carburantAlertes  = require('./modules/carburant-alertes');
 
 const PORT = process.env.PORT || 3000;
 
@@ -529,6 +531,39 @@ app.get('/api/gps-hours/:date', (req, res) => {
   } catch (e) {
     logger.err(`GET /api/gps-hours/${date} : ${e.message}`);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Carburant — import et alertes ────────────────────────────────────────────
+app.post('/api/carburant/import', async (req, res) => {
+  // Peut prendre plusieurs minutes si l'API Mapping est sollicitée (règle B)
+  req.socket.setTimeout(0);
+  try {
+    const { data_base64, filename, skipMapping } = req.body || {};
+    if (!data_base64) return res.status(400).json({ error: 'data_base64 manquant' });
+
+    const buffer       = Buffer.from(data_base64, 'base64');
+    const transactions = parserCarburant.parseCarburant(buffer);
+    logger.ok(`Carburant import : ${transactions.length} transactions depuis "${filename || 'fichier'}"`);
+
+    const results = await carburantAlertes.analyserTransactions(transactions, {
+      skipMappingApi: skipMapping === true || !process.env.MAPPING_CLIENT_ID,
+    });
+
+    const nbAlertes = results.filter(r => r.alertes.length > 0).length;
+    res.json({ count: results.length, alertes: nbAlertes, transactions: results });
+  } catch (err) {
+    logger.err(`POST /api/carburant/import : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/carburant/alertes', (_req, res) => {
+  try {
+    res.json(carburantAlertes.getAlertes());
+  } catch (err) {
+    logger.err(`GET /api/carburant/alertes : ${err.message}`);
+    res.status(500).json({ error: err.message });
   }
 });
 

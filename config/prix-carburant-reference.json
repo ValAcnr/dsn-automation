@@ -1,0 +1,7 @@
+{
+  "gazole": 1.75,
+  "sp95": 1.90,
+  "sp98": 1.95,
+  "defaut": 1.75,
+  "_note": "Prix de référence en €/L HT. Modifier sans redéploiement. Seuil d'alerte : +15% au-dessus de la référence."
+}
