@@ -112,7 +112,7 @@
         <option value="">Toutes les zones</option>
       </select>
       <button class="btn btn-ghost" onclick="load()">&#8635; Actualiser</button>
-      <a href="/api/tournees/export" class="btn btn-primary">&#128202; Télécharger Excel</a>
+      <button class="btn btn-primary" id="btn-export" onclick="downloadExport()">&#128202; Télécharger ZIP (toutes zones)</button>
     </div>
   </div>
 
@@ -140,10 +140,31 @@ function fmtDate(iso) {
 
 function populateZoneFilter() {
   const sel = document.getElementById('filter-zone');
-  const zones = [...new Set(allRows.map(r => r.zone_name).filter(Boolean))].sort();
+  // Construire les paires (zone_id, zone_name) depuis les lignes reçues
+  const zones = {};
+  allRows.forEach(r => { if (r.zone && r.zone_name) zones[r.zone] = r.zone_name; });
   const cur = sel.value;
   sel.innerHTML = '<option value="">Toutes les zones</option>' +
-    zones.map(z => `<option value="${esc(z)}"${z === cur ? ' selected' : ''}>${esc(z)}</option>`).join('');
+    Object.entries(zones)
+      .sort(([, a], [, b]) => a.localeCompare(b))
+      .map(([id, name]) => `<option value="${esc(id)}"${id === cur ? ' selected' : ''}>${esc(name)}</option>`)
+      .join('');
+}
+
+function updateExportBtn() {
+  const zone = document.getElementById('filter-zone').value;
+  const btn  = document.getElementById('btn-export');
+  btn.textContent = zone
+    ? '\u{1F4CA} Télécharger Excel (zone)'
+    : '\u{1F4CA} Télécharger ZIP (toutes zones)';
+}
+
+function downloadExport() {
+  const zone = document.getElementById('filter-zone').value;
+  const url  = zone
+    ? `/api/tournees/export?zone=${encodeURIComponent(zone)}`
+    : '/api/tournees/export';
+  window.location.href = url;
 }
 
 function render() {
@@ -152,7 +173,7 @@ function render() {
 
   const rows = allRows.filter(r =>
     (!dateFilter || r.date === dateFilter) &&
-    (!zoneFilter || r.zone_name === zoneFilter)
+    (!zoneFilter || r.zone === zoneFilter)
   );
 
   document.getElementById('count-badge').textContent = rows.length + ' ligne' + (rows.length !== 1 ? 's' : '');
@@ -212,7 +233,7 @@ async function load() {
 }
 
 document.getElementById('filter-date').addEventListener('change', render);
-document.getElementById('filter-zone').addEventListener('change', render);
+document.getElementById('filter-zone').addEventListener('change', () => { render(); updateExportBtn(); });
 
 load();
 </script>

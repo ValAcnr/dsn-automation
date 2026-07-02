@@ -600,26 +600,48 @@ app.get('/api/tournees', (_req, res) => {
   }
 });
 
-app.get('/api/tournees/export', (_req, res) => {
+app.get('/api/tournees/export', (req, res) => {
+  const today  = new Date().toISOString().slice(0, 10);
+  const zoneId = String(req.query.zone || '').trim();
+
   try {
-    const rows = tournees.getFlatRows();
-    const headers = ['Date', 'Site', 'Tournée', 'Chauffeur', 'Véhicule', 'Observations', 'Responsable', 'Heure d\'envoi'];
-    const data = [
-      headers,
-      ...rows.map(r => [r.date, r.site, r.tournee, r.chauffeur, r.vehicule, r.observations, r.responsable, r.heure_envoi]),
-    ];
-    const wb = xlsx.utils.book_new();
-    const ws = xlsx.utils.aoa_to_sheet(data);
-    ws['!cols'] = [10, 20, 12, 22, 14, 30, 18, 10].map(w => ({ wch: w }));
-    xlsx.utils.book_append_sheet(wb, ws, 'Tournées');
-    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    const filename = `tournees_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buf);
+    if (zoneId) {
+      // ── Un seul .xlsx pour la zone demandée ──────────────────────────────
+      const wb  = tournees.buildZoneWorkbook(zoneId);
+      const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      const safe = zoneId.replace(/[^a-z0-9_-]/gi, '_');
+      res.setHeader('Content-Disposition', `attachment; filename="tournees_${safe}_${today}.xlsx"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      return res.send(buf);
+    }
+
+    // ── Toutes les zones : un .xlsx par zone dans un .zip ─────────────────
+    const cfg     = tournees.loadSitesConfig();
+    const zoneIds = Object.keys(cfg.zones || {});
+    const archive = archiver('zip', { zlib: { level: 6 } });
+
+    res.setHeader('Content-Disposition', `attachment; filename="tournees_toutes_zones_${today}.zip"`);
+    res.setHeader('Content-Type', 'application/zip');
+    archive.pipe(res);
+    archive.on('error', err => {
+      logger.err(`ZIP tournées : ${err.message}`);
+    });
+
+    for (const zid of zoneIds) {
+      try {
+        const wb   = tournees.buildZoneWorkbook(zid);
+        const buf  = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        const safe = zid.replace(/[^a-z0-9_-]/gi, '_');
+        archive.append(buf, { name: `tournees_${safe}_${today}.xlsx` });
+      } catch (e) {
+        logger.err(`ZIP tournées — zone ${zid} : ${e.message}`);
+      }
+    }
+
+    archive.finalize();
   } catch (e) {
     logger.err(`GET /api/tournees/export : ${e.message}`);
-    res.status(500).json({ error: e.message });
+    if (!res.headersSent) res.status(500).json({ error: e.message });
   }
 });
 
