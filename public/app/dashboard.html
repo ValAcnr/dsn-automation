@@ -438,9 +438,9 @@ function renderStats() {
   });
   document.getElementById('stat-feuilles').textContent = feuillesMois.length;
   document.getElementById('stat-alertes').textContent  =
-    data.controles.filter(r => r.niveau_alerte === 'ATTENTION' || r.niveau_alerte === 'CRITIQUE').length;
+    data.controles.filter(r => r.alerte_gps === 'ATTENTION' || r.alerte_gps === 'CRITIQUE').length;
   document.getElementById('stat-attente').textContent  =
-    data.controles.filter(r => r.niveau_alerte === 'EN ATTENTE').length;
+    data.controles.filter(r => r.alerte_gps === 'EN ATTENTE').length;
 }
 
 function parseSem(s) {
@@ -487,9 +487,9 @@ function renderTable() {
       <td class="num">${fmtH(r.heures_signees)}</td>
       <td class="num">${fmtH(r.heures_facturees)}</td>
       <td>${fmtEcart(r.ecart_facture)}</td>
-      <td class="num">${fmtH(r.heures_vehicule)}</td>
-      <td>${fmtEcart(r.ecart_mapping)}</td>
-      <td>${badge(r.niveau_alerte)}</td>`;
+      <td class="num">${fmtH(r.h_gps)}</td>
+      <td>${fmtEcart(r.ecart_gps)}</td>
+      <td>${badge(r.alerte_gps)}</td>`;
     tbody.appendChild(tr);
   });
 
@@ -583,11 +583,13 @@ function openModal(nom, prenom, semaine) {
         <tr><td>Heures facturées</td><td>${fmtH(ctrl.heures_facturees)}</td></tr>
         <tr><td>Écart facture</td><td>${fmtEcart(ctrl.ecart_facture)}</td></tr>
         <tr><td>Statut facture</td><td>${esc(ctrl.statut_facture||'—')}</td></tr>
-        <tr><td>Heures GPS (véhicule)</td><td>${fmtH(ctrl.heures_vehicule)}</td></tr>
+        <tr><td>Heures GPS (trajets)</td><td>${fmtH(ctrl.h_gps)}</td></tr>
+        <tr><td>Heures GPS (CSV Mapping)</td><td>${fmtH(ctrl.heures_vehicule)}</td></tr>
         <tr><td>Véhicule actif</td><td>${esc(ctrl.vehicule_actif||'—')}</td></tr>
-        <tr><td>Écart mapping GPS</td><td>${fmtEcart(ctrl.ecart_mapping)}</td></tr>
-        <tr><td>Statut mapping</td><td>${esc(ctrl.statut_mapping||'—')}</td></tr>
-        <tr><td>Niveau d'alerte</td><td>${badge(ctrl.niveau_alerte)}</td></tr>
+        <tr><td>Écart GPS (trajets)</td><td>${fmtEcart(ctrl.ecart_gps)}</td></tr>
+        <tr><td>Écart GPS (CSV Mapping)</td><td>${fmtEcart(ctrl.ecart_mapping)}</td></tr>
+        <tr><td>Alerte GPS</td><td>${badge(ctrl.alerte_gps)}</td></tr>
+        <tr><td>Alerte globale (Excel)</td><td>${badge(ctrl.niveau_alerte)}</td></tr>
         ${ctrl.detail ? `<tr><td>Détail</td><td style="color:var(--gray-600)">${esc(ctrl.detail)}</td></tr>` : ''}
       </table>
     </div>`;

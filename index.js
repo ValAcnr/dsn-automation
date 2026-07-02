@@ -11,6 +11,7 @@ const parserMapping = require('./modules/parser-mapping');
 const logger        = require('./modules/logger');
 const calcul          = require('./modules/calcul-controles');
 const excelVehicules  = require('./modules/excel-vehicules');
+const gpsMatcher      = require('./modules/gps-matcher');
 
 const PORT = process.env.PORT || 3000;
 
@@ -178,12 +179,29 @@ app.get('/api/conges', async (_req, res) => {
 
 app.get('/api/dashboard', (_req, res) => {
   try {
-    const wb = readWorkbook();
+    const wb       = readWorkbook();
+    const controles = getSheetData(wb, 'Controles').map(row => {
+      const nomInterimaire = `${row.nom || ''} ${row.prenom || ''}`.trim();
+      const gps = gpsMatcher.getGpsHoursForWeek(nomInterimaire, row.semaine);
+      let h_gps      = null;
+      let ecart_gps  = null;
+      let alerte_gps = 'EN ATTENTE';
+      if (gps !== null) {
+        h_gps = gps.totalHeuresGps;
+        const ref = parseFloat(row.heures_signees) || 0;
+        ecart_gps = ref > 0 ? Math.round((ref - h_gps) * 100) / 100 : null;
+        if (ecart_gps !== null) {
+          const pct = Math.abs(ecart_gps) / ref;
+          alerte_gps = pct > 0.25 ? 'CRITIQUE' : pct > 0.10 ? 'ATTENTION' : 'OK';
+        }
+      }
+      return { ...row, h_gps, ecart_gps, alerte_gps };
+    });
     res.json({
       feuilles:  getSheetData(wb, 'Feuilles'),
       facture:   getSheetData(wb, 'Facture'),
       mapping:   getSheetData(wb, 'Mapping'),
-      controles: getSheetData(wb, 'Controles'),
+      controles,
     });
   } catch (err) {
     logger.err(`Dashboard API : ${err.message}`);
