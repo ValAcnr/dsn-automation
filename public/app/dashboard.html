@@ -255,6 +255,16 @@
     .dtable td:first-child { color: var(--gray-600); font-weight: 500; width: 55%; }
     .dtable tr:last-child td { border-bottom: none; }
 
+    /* ── Diagnostic règles carburant ───────────────── */
+    .rule-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 12px 0; border-bottom: 1px solid var(--gray-100);
+    }
+    .rule-row:last-child { border-bottom: none; }
+    .rule-badge  { flex-shrink: 0; min-width: 82px; padding-top: 1px; }
+    .rule-name   { font-weight: 600; font-size: 13px; color: var(--gray-800); margin-bottom: 3px; }
+    .rule-detail { font-size: 13px; color: var(--gray-600); line-height: 1.55; }
+
     /* Buttons */
     .btn {
       display: inline-flex; align-items: center; gap: 6px;
@@ -384,6 +394,23 @@
   </div>
 
 </main>
+
+<!-- Modal carburant détail -->
+<div class="overlay" id="overlay-carburant">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="mc-title"></div>
+        <div class="modal-sub"   id="mc-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeCarburantModal()">✕</button>
+    </div>
+    <div class="modal-body" id="mc-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCarburantModal()">Fermer</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal -->
 <div class="overlay" id="overlay">
@@ -830,7 +857,10 @@ function setCarburantStatus(msg, type) {
   el.style.border     = `1px solid ${type === 'ok' ? '#bbf7d0' : type === 'err' ? '#fecaca' : '#bfdbfe'}`;
 }
 
+let _carburantRows = [];
+
 function renderCarburant(rows) {
+  _carburantRows = rows || [];
   const container = document.getElementById('carburant-container');
   if (!rows || !rows.length) {
     container.innerHTML = '<div class="placeholder">Aucune transaction valide trouvée.</div>';
@@ -843,11 +873,11 @@ function renderCarburant(rows) {
   const tbl = document.createElement('table');
   tbl.innerHTML = `<thead><tr>
     <th>Immatriculation</th><th>Conducteur</th><th>Date</th><th>Heure</th>
-    <th>Produit</th><th>Litres</th><th>Montant HT</th><th>Ville</th><th>Alertes</th>
+    <th>Produit</th><th>Litres</th><th>Montant HT</th><th>Ville</th><th>Alertes</th><th></th>
   </tr></thead>`;
 
   const tbody = document.createElement('tbody');
-  sorted.forEach(r => {
+  sorted.forEach((r, i) => {
     const haAlert = r.alertes?.length > 0;
     const alerteBadges = (r.alertes || []).map(a => {
       const cls = a.code === 'HORS_ROULAGE' ? 'badge-critique' : 'badge-attention';
@@ -856,6 +886,7 @@ function renderCarburant(rows) {
 
     const tr = document.createElement('tr');
     if (haAlert) tr.style.background = '#fff7ed';
+    tr.style.cursor = 'pointer';
     tr.innerHTML = `
       <td class="name-cell">${esc(r.immatriculation || '')}</td>
       <td>${esc(r.conducteur || '')}</td>
@@ -865,13 +896,128 @@ function renderCarburant(rows) {
       <td class="num">${r.litres != null ? r.litres.toFixed(1) + ' L' : '—'}</td>
       <td class="num">${r.montant_ht != null ? r.montant_ht.toFixed(2) + ' €' : '—'}</td>
       <td>${esc(r.ville || '')}</td>
-      <td style="white-space:nowrap">${alerteBadges || '<span style="color:var(--gray-400);font-size:11px">OK</span>'}</td>`;
+      <td style="white-space:nowrap">${alerteBadges || '<span style="color:var(--gray-400);font-size:11px">OK</span>'}</td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openCarburantModal(${JSON.stringify(i)})">Détail</button></td>`;
+    tr.addEventListener('click', () => openCarburantModal(i));
     tbody.appendChild(tr);
   });
 
   tbl.appendChild(tbody);
   container.innerHTML = '';
   container.appendChild(tbl);
+}
+
+/* ── Modal détail carburant ──────────────────────── */
+function openCarburantModal(idx) {
+  const r = _carburantRows[idx];
+  if (!r) return;
+
+  document.getElementById('mc-title').textContent =
+    `${r.immatriculation || '—'} — ${r.date || ''}`;
+  document.getElementById('mc-sub').textContent =
+    `${r.conducteur || '—'}  ·  ${r.produit || '—'}  ·  ` +
+    `${r.litres != null ? r.litres.toFixed(1) + ' L' : '—'}  ·  ` +
+    `${r.montant_ht != null ? r.montant_ht.toFixed(2) + ' €' : '—'}`;
+
+  const d = r.diagnostic || {};
+  document.getElementById('mc-body').innerHTML = `
+    <div class="msec">
+      <div class="msec-title">Informations transaction</div>
+      <table class="dtable">
+        <tr><td>Immatriculation</td><td><strong>${esc(r.immatriculation || '—')}</strong></td></tr>
+        <tr><td>Conducteur</td><td>${esc(r.conducteur || '—')}</td></tr>
+        <tr><td>Date / Heure</td><td>${esc(r.date || '')} à ${esc(r.heure || '')}</td></tr>
+        <tr><td>Produit</td><td>${esc(r.produit || '—')}</td></tr>
+        <tr><td>Quantité</td><td>${r.litres != null ? r.litres.toFixed(1) + ' L' : '—'}</td></tr>
+        <tr><td>Montant HT</td><td>${r.montant_ht != null ? r.montant_ht.toFixed(2) + ' €' : '—'}</td></tr>
+        <tr><td>Prix unitaire</td><td>${r.prix_unitaire != null ? r.prix_unitaire.toFixed(3) + ' €/L' : '—'}</td></tr>
+        <tr><td>Kilométrage relevé</td><td>${r.kilometrage != null ? r.kilometrage.toLocaleString('fr-FR') + ' km' : '—'}</td></tr>
+        <tr><td>Ville / Station</td><td>${esc(r.ville || '—')}</td></tr>
+        <tr><td>N° carte</td><td>${esc(r.numero_carte || '—')}</td></tr>
+      </table>
+    </div>
+    <div class="msec">
+      <div class="msec-title">Diagnostic des 3 règles</div>
+      ${diagRuleA(d.ecart_conso)}
+      ${diagRuleB(d.hors_roulage)}
+      ${diagRuleC(d.prix_anormal)}
+    </div>`;
+
+  document.getElementById('overlay-carburant').classList.add('open');
+}
+
+function closeCarburantModal() {
+  document.getElementById('overlay-carburant').classList.remove('open');
+}
+document.getElementById('overlay-carburant').addEventListener('click', function(e) {
+  if (e.target === this) closeCarburantModal();
+});
+
+function _ruleBadge(declenche) {
+  if (declenche === null || declenche === undefined)
+    return '<span class="badge badge-attente">Non évalué</span>';
+  return declenche
+    ? '<span class="badge badge-critique">Alerte</span>'
+    : '<span class="badge badge-ok">OK</span>';
+}
+
+function _ruleRow(label, declenche, detail) {
+  return `<div class="rule-row">
+    <div class="rule-badge">${_ruleBadge(declenche)}</div>
+    <div>
+      <div class="rule-name">${label}</div>
+      <div class="rule-detail">${detail}</div>
+    </div>
+  </div>`;
+}
+
+function diagRuleA(a) {
+  if (!a) return _ruleRow('Règle A — Écart consommation', null, 'Données de diagnostic non disponibles (ancienne version)');
+  if (a.declenche === null) {
+    return _ruleRow('Règle A — Écart consommation', null,
+      `<em>${esc(a.raison_non_evalue || 'Non évalué')}</em>`);
+  }
+  const seuilL   = a.litres_theoriques != null ? (a.litres_theoriques * (1 + a.seuil_pct / 100)).toFixed(1) : '—';
+  const pct      = a.litres_theoriques > 0 ? Math.round((a.litres_reels / a.litres_theoriques - 1) * 100) : null;
+  const ecartTxt = pct !== null ? `— écart de <strong>${pct >= 0 ? '+' : ''}${pct}%</strong>` : '';
+  const detail   = `Consommation réelle <strong>${a.litres_reels?.toFixed(1)} L</strong> ` +
+    `vs théorique <strong>${a.litres_theoriques?.toFixed(1)} L</strong> ` +
+    `(${a.km_parcourus} km × ${a.conso_ref} L/100 km) — ` +
+    `seuil déclenchement : ${seuilL} L (+${a.seuil_pct}%) ${ecartTxt}`;
+  return _ruleRow('Règle A — Écart consommation', a.declenche, detail);
+}
+
+function diagRuleB(b) {
+  if (!b) return _ruleRow('Règle B — Hors roulage (GPS)', null, 'Données de diagnostic non disponibles (ancienne version)');
+  if (b.declenche === null) {
+    const msg = b.erreur_api
+      ? `Impossible de vérifier — erreur API Mapping Control : <em>${esc(b.erreur_api)}</em>`
+      : `<em>${esc(b.raison_non_evalue || 'Non évalué')}</em>`;
+    return _ruleRow('Règle B — Hors roulage (GPS)', null, msg);
+  }
+  let detail;
+  if (b.trajets_trouves === 0) {
+    detail = 'Aucun trajet GPS enregistré ce jour pour ce véhicule.';
+  } else if (b.declenche) {
+    detail = `<strong>${b.trajets_trouves}</strong> trajet(s) trouvé(s) ce jour — aucun ne couvre la transaction de <strong>${esc(b.heure_transaction || '')} ±1h</strong>.`;
+  } else {
+    detail = `<strong>${b.trajets_trouves}</strong> trajet(s) GPS couvrant la transaction à <strong>${esc(b.heure_transaction || '')}</strong>.`;
+  }
+  return _ruleRow('Règle B — Hors roulage (GPS)', b.declenche, detail);
+}
+
+function diagRuleC(c) {
+  if (!c) return _ruleRow('Règle C — Prix au litre anormal', null, 'Données de diagnostic non disponibles (ancienne version)');
+  if (c.declenche === null) {
+    return _ruleRow('Règle C — Prix au litre anormal', null,
+      `<em>${esc(c.raison_non_evalue || 'Non évalué')}</em>`);
+  }
+  const seuilEur = c.prix_reference != null ? (c.prix_reference * (1 + c.seuil_pct / 100)).toFixed(3) : '—';
+  const detail   = `Prix réel <strong>${c.prix_reel?.toFixed(3)} €/L</strong> ` +
+    `(source : ${esc(c.prix_source || '—')}) — ` +
+    `référence <strong>${c.prix_reference} €/L</strong> (${c.produit}) — ` +
+    `seuil déclenchement : ${seuilEur} €/L (+${c.seuil_pct}%)`;
+  return _ruleRow('Règle C — Prix au litre anormal', c.declenche, detail);
 }
 
 async function loadCarburant() {
