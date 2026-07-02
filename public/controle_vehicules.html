@@ -9,19 +9,19 @@
     :root{
       --navy:#1a2f5a;--navy2:#1e3a73;
       --blue:#2563eb;
-      --green:#22c55e;
+      --green:#22c55e;--green-bg:#f0fdf4;
       --red:#ef4444;--red-bg:#fef2f2;
-      --amber:#d97706;--amber-bg:#fffbeb;
       --bg:#f0f4f8;--white:#fff;
       --border:#d1d5db;--border-light:#e5e7eb;
       --text:#1e293b;--text2:#374151;--text3:#6b7280;--text4:#9ca3af;
       --r:12px;--rx:8px;
-      --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+      --shadow:0 1px 3px rgba(0,0,0,.1);
       --shadow-card:0 2px 8px rgba(0,0,0,.08);
     }
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
       background:var(--bg);color:var(--text);min-height:100vh}
 
+    /* ── Header ── */
     .hdr{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
       color:#fff;padding-top:env(safe-area-inset-top)}
     .hdr-inner{padding:14px 16px;display:flex;align-items:center;gap:12px}
@@ -30,50 +30,56 @@
     .hdr-title{font-size:17px;font-weight:700;line-height:1.2}
     .hdr-sub{font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 
-    .main{padding:16px;max-width:600px;margin:0 auto;
-      padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+    /* ── Écrans ── */
+    .screen{display:none}
+    .screen.active{display:block}
 
-    .date-bar{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);
-      padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
-    .date-bar label{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap}
-    .date-bar input{flex:1;border:1px solid var(--border);border-radius:var(--rx);
-      padding:9px 12px;font-size:15px;font-family:inherit;color:var(--text);outline:none;
-      background:var(--bg);transition:border-color .15s}
-    .date-bar input:focus{border-color:var(--blue);background:var(--white)}
+    /* ── Accueil ── */
+    .accueil-wrap{padding:24px 16px;max-width:500px;margin:0 auto}
+    .accueil-msg{border-radius:var(--rx);padding:12px 14px;margin-bottom:20px;
+      font-size:14px;font-weight:500;line-height:1.4;display:none}
+    .accueil-msg.ok{background:var(--green-bg);color:#166534;border:1px solid #bbf7d0;display:block}
+    .accueil-msg.err{background:var(--red-bg);color:#991b1b;border:1px solid #fecaca;display:block}
+    .accueil-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+    .accueil-btn{background:var(--white);border:2px solid var(--border-light);border-radius:16px;
+      padding:28px 16px;cursor:pointer;font-family:inherit;transition:all .18s;
+      display:flex;flex-direction:column;align-items:center;gap:10px;
+      box-shadow:var(--shadow-card);text-align:center}
+    .accueil-btn:hover,.accueil-btn:active{border-color:var(--blue);
+      box-shadow:0 4px 16px rgba(37,99,235,.18);transform:translateY(-2px)}
+    .accueil-btn-ico{font-size:40px;line-height:1}
+    .accueil-btn-label{font-size:15px;font-weight:700;color:var(--text)}
+    .accueil-btn-sub{font-size:11px;color:var(--text3);line-height:1.3}
 
-    .vc-card{background:var(--white);border-radius:var(--r);
-      box-shadow:var(--shadow-card);margin-bottom:14px;overflow:hidden}
-    .vc-card-head{background:linear-gradient(135deg,var(--navy),var(--navy2));
-      color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
-    .vc-card-num{font-size:14px;font-weight:700;letter-spacing:.3px}
-    .head-right{display:flex;align-items:center;gap:8px}
+    /* ── Formulaire commun ── */
+    .form-wrap{max-width:600px;margin:0 auto;
+      padding:16px 16px calc(32px + env(safe-area-inset-bottom))}
+    .form-back{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .btn-back{background:transparent;border:none;color:var(--text3);font-size:14px;
+      font-weight:600;cursor:pointer;font-family:inherit;padding:0;
+      display:flex;align-items:center;gap:5px;transition:color .15s}
+    .btn-back:hover{color:var(--blue)}
+    .form-title{font-size:18px;font-weight:800;color:var(--navy)}
 
-    /* Toggle mode */
-    .mode-btn{border:none;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;
-      cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .2s;
-      background:rgba(255,255,255,.18);color:#fff}
-    .mode-btn.complet{background:rgba(255,255,255,.9);color:var(--navy)}
-
-    .btn-del{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;
-      padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
-      transition:background .15s}
-    .btn-del:hover{background:rgba(239,68,68,.55)}
-    .vc-card-body{padding:16px 16px 4px}
+    .card{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow-card);
+      padding:18px 16px;margin-bottom:14px}
+    .card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+      color:var(--text3);margin-bottom:14px}
 
     .field{margin-bottom:14px}
+    .field:last-child{margin-bottom:0}
     .field-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
       letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
     .fi{width:100%;border:1px solid var(--border);border-radius:var(--rx);
       padding:11px 14px;font-size:16px;font-family:inherit;color:var(--text);
-      outline:none;background:var(--bg);transition:border-color .15s}
+      outline:none;background:var(--bg);transition:border-color .15s;
+      -webkit-appearance:none;appearance:none}
     .fi:focus{border-color:var(--blue);background:var(--white)}
-    select.fi{-webkit-appearance:none;appearance:none;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+    textarea.fi{resize:vertical;min-height:64px;line-height:1.5}
 
-    /* Sangle toggle */
-    .field-sangle{display:flex;align-items:center;gap:12px;padding:10px 0}
-    .field-sangle .field-label{margin-bottom:0;flex:1}
+    /* ── Toggle Oui / Non ── */
+    .toggle-row{display:flex;align-items:center;gap:12px;padding:10px 0}
+    .toggle-row .field-label{margin-bottom:0;flex:1}
     .sw{width:46px;height:27px;border-radius:14px;background:#D1D5DB;border:none;
       position:relative;cursor:pointer;transition:.22s;flex-shrink:0;
       box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
@@ -82,68 +88,61 @@
       box-shadow:0 1px 3px rgba(0,0,0,.2)}
     .sw.on{background:var(--green)}
     .sw.on::after{left:calc(100% - 24px)}
-    .sangle-val{font-size:14px;font-weight:700;color:var(--text3);min-width:30px}
-    .sw.on ~ .sangle-val{color:var(--green)}
+    .toggle-val{font-size:14px;font-weight:700;color:var(--red);min-width:30px;
+      transition:color .2s}
+    .sw.on ~ .toggle-val{color:var(--green)}
 
-    /* Mode complet section */
-    .complet-section{margin-top:2px;padding-top:2px}
-    .complet-sep{display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:4px}
-    .complet-sep::before,.complet-sep::after{content:'';flex:1;height:1px;background:var(--border-light)}
-    .complet-sep span{font-size:10px;font-weight:700;text-transform:uppercase;
-      letter-spacing:.08em;color:var(--text4);white-space:nowrap}
+    /* ── Sub-champ conditionnel ── */
+    .toggle-sub{margin-top:8px;padding-top:0}
 
-    /* Checkbox field */
-    .field-check{display:flex;align-items:center;gap:10px;padding:8px 0;margin-bottom:0}
-    .field-check .field-label{margin-bottom:0;flex:1;text-transform:none;font-size:13px;
-      font-weight:600;color:var(--text2);letter-spacing:0}
-    .chk{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;
-      appearance:none;-webkit-appearance:none;background:var(--bg);flex-shrink:0;
-      cursor:pointer;transition:all .15s;position:relative}
-    .chk:checked{background:var(--blue);border-color:var(--blue)}
-    .chk:checked::after{content:'✓';position:absolute;top:50%;left:50%;
-      transform:translate(-50%,-50%);color:#fff;font-size:12px;font-weight:700;line-height:1}
-    .complet-sub{margin-top:4px;margin-left:30px}
+    /* ── Photo ── */
+    .photo-area{margin-top:8px}
+    .btn-photo{background:var(--bg);border:1.5px dashed var(--border);color:var(--text3);
+      border-radius:var(--rx);padding:9px 14px;font-size:13px;font-weight:600;
+      cursor:pointer;font-family:inherit;width:100%;transition:all .15s;margin-bottom:8px}
+    .btn-photo:hover{border-color:var(--blue);color:var(--blue);border-style:solid}
+    .photo-preview{display:none;position:relative;border-radius:var(--rx);overflow:hidden;
+      border:1px solid var(--border-light)}
+    .photo-preview.visible{display:block}
+    .photo-preview img{display:block;width:100%;max-height:220px;object-fit:cover}
+    .btn-photo-del{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);
+      color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:14px;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
 
-    /* Signature pad */
+    /* ── Signature pad ── */
     .sig-lbl{font-size:11px;font-weight:700;text-transform:uppercase;
       letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
     .sig-wrap{position:relative;background:var(--bg);border:2px dashed var(--border);
-      border-radius:var(--rx);overflow:hidden;touch-action:none;margin-bottom:6px;
-      transition:border-color .2s}
+      border-radius:var(--rx);overflow:hidden;touch-action:none;
+      margin-bottom:6px;transition:border-color .2s}
     .sig-wrap canvas{display:block;width:100%;height:100px}
     .sig-hint{position:absolute;inset:0;display:flex;flex-direction:column;
       align-items:center;justify-content:center;pointer-events:none;gap:4px}
     .sig-hint-ico{font-size:22px;opacity:.25}
     .sig-hint-txt{font-size:12px;color:var(--text4);font-weight:500}
-    .sig-act{display:flex;justify-content:flex-end;margin-bottom:14px}
+    .sig-act{display:flex;justify-content:flex-end;margin-bottom:6px}
     .sig-clear{font-size:11px;padding:4px 10px;background:transparent;
       border:1px solid var(--border);border-radius:var(--rx);cursor:pointer;
       font-family:inherit;color:var(--text3);transition:all .15s}
     .sig-clear:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
 
-    .vc-card-footer{border-top:1px solid var(--border-light);padding:10px 16px;
-      display:flex;justify-content:flex-end}
-    .btn-add-after{background:transparent;border:1px solid var(--border);color:var(--text3);
-      border-radius:var(--rx);padding:8px 14px;font-size:13px;font-weight:600;
-      cursor:pointer;font-family:inherit;transition:all .15s}
-    .btn-add-after:hover{border-color:var(--blue);color:var(--blue)}
+    /* ── Date bar ── */
+    .date-row{display:flex;align-items:center;gap:10px}
+    .date-row label{font-size:11px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--text3);white-space:nowrap}
+    .date-row input{flex:1}
 
-    .btn-add-global{width:100%;background:var(--white);border:2px dashed var(--border);
-      color:var(--text3);border-radius:var(--r);padding:14px 16px;font-size:15px;
-      font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px;transition:all .15s}
-    .btn-add-global:hover{border-color:var(--blue);color:var(--blue);border-style:solid}
-
-    .btn-envoyer{width:100%;background:linear-gradient(135deg,var(--navy),var(--navy2));
-      color:#fff;border:none;border-radius:var(--r);padding:16px;font-size:16px;
-      font-weight:700;cursor:pointer;font-family:inherit;
-      box-shadow:0 4px 12px rgba(26,47,90,.35);transition:opacity .15s;letter-spacing:.3px}
-    .btn-envoyer:hover{opacity:.88}
-    .btn-envoyer:disabled{opacity:.5;cursor:not-allowed}
-
-    .status{border-radius:var(--rx);padding:12px 14px;margin-bottom:14px;
+    /* ── Status & bouton principal ── */
+    .form-status{border-radius:var(--rx);padding:12px 14px;margin-bottom:14px;
       font-size:14px;font-weight:500;display:none;line-height:1.4}
-    .status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
-    .status.err{background:var(--red-bg);color:#991b1b;border:1px solid #fecaca;display:block}
+    .form-status.ok{background:var(--green-bg);color:#166534;border:1px solid #bbf7d0;display:block}
+    .form-status.err{background:var(--red-bg);color:#991b1b;border:1px solid #fecaca;display:block}
+    .btn-valider{width:100%;background:linear-gradient(135deg,var(--navy),var(--navy2));
+      color:#fff;border:none;border-radius:var(--r);padding:16px;font-size:16px;
+      font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.3px;
+      box-shadow:0 4px 12px rgba(26,47,90,.35);transition:opacity .15s}
+    .btn-valider:hover{opacity:.88}
+    .btn-valider:disabled{opacity:.5;cursor:not-allowed}
   </style>
 </head>
 <body>
@@ -158,45 +157,300 @@
   </div>
 </header>
 
-<div class="main">
-
-  <div class="date-bar">
-    <label for="date-controle">Date</label>
-    <input type="date" id="date-controle">
+<!-- ══════════════════════════════════════════════ ACCUEIL ══ -->
+<div id="screen-accueil" class="screen active">
+  <div class="accueil-wrap">
+    <div id="accueil-msg" class="accueil-msg"></div>
+    <div class="accueil-grid">
+      <button class="accueil-btn" onclick="showScreen('vehicule')">
+        <span class="accueil-btn-ico">🚐</span>
+        <span class="accueil-btn-label">Contrôle véhicule</span>
+        <span class="accueil-btn-sub">Sangle, roue, état général</span>
+      </button>
+      <button class="accueil-btn" onclick="showScreen('papier')">
+        <span class="accueil-btn-ico">📋</span>
+        <span class="accueil-btn-label">Contrôle papier</span>
+        <span class="accueil-btn-sub">Documents &amp; administratif</span>
+      </button>
+    </div>
   </div>
+</div>
 
-  <div id="vc-list"></div>
+<!-- ══════════════════════════════════════════ FORM VÉHICULE ══ -->
+<div id="screen-vehicule" class="screen">
+  <div class="form-wrap">
+    <div class="form-back">
+      <button class="btn-back" onclick="showAccueil()">&#8592; Retour</button>
+      <span class="form-title">Contrôle véhicule</span>
+    </div>
 
-  <button class="btn-add-global" onclick="addLigne(true)">+ Ajouter une ligne</button>
+    <!-- Identité -->
+    <div class="card">
+      <div class="card-title">Identification</div>
+      <div class="field">
+        <div class="date-row">
+          <label for="date-v">Date</label>
+          <input class="fi" type="date" id="date-v">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="immat-v">Immatriculation</label>
+        <input class="fi" type="text" id="immat-v" placeholder="AA-123-BB"
+          autocomplete="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="field-label" for="nom-v">Nom</label>
+        <input class="fi" type="text" id="nom-v" placeholder="DUPONT" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label" for="prenom-v">Prénom</label>
+        <input class="fi" type="text" id="prenom-v" placeholder="Jean" autocomplete="off">
+      </div>
+    </div>
 
-  <div class="status" id="status-bar"></div>
+    <!-- Checks véhicule -->
+    <div class="card">
+      <div class="card-title">Vérifications</div>
+      <div class="field toggle-row">
+        <span class="field-label">Sangle présente</span>
+        <button class="sw" id="sangle-v" type="button" onclick="toggleOuiNon(this)"></button>
+        <span class="toggle-val">Non</span>
+      </div>
+      <div class="field toggle-row" style="border-top:1px solid var(--border-light);padding-top:10px">
+        <span class="field-label">Roue de secours</span>
+        <button class="sw" id="roue-secours-v" type="button" onclick="toggleOuiNon(this)"></button>
+        <span class="toggle-val">Non</span>
+      </div>
+    </div>
 
-  <button class="btn-envoyer" id="btn-envoyer" onclick="envoyerTout()">Envoyer</button>
+    <!-- État intérieur -->
+    <div class="card">
+      <div class="card-title">État intérieur</div>
+      <div class="field">
+        <textarea class="fi" id="etat-int" rows="2" placeholder="Observations sur l'état intérieur…"></textarea>
+      </div>
+      <div class="photo-area">
+        <button type="button" class="btn-photo" onclick="document.getElementById('photo-int-input').click()">
+          📷 Prendre / importer une photo
+        </button>
+        <input type="file" id="photo-int-input" accept="image/*" capture="environment"
+          style="display:none" onchange="handlePhoto(this,'interieur')">
+        <div id="photo-interieur-preview" class="photo-preview">
+          <img id="photo-interieur-img" alt="Photo intérieur">
+          <button type="button" class="btn-photo-del" onclick="clearPhoto('interieur')" title="Supprimer">✕</button>
+        </div>
+      </div>
+    </div>
 
+    <!-- État extérieur -->
+    <div class="card">
+      <div class="card-title">État extérieur</div>
+      <div class="field">
+        <textarea class="fi" id="etat-ext" rows="2" placeholder="Observations sur l'état extérieur…"></textarea>
+      </div>
+      <div class="photo-area">
+        <button type="button" class="btn-photo" onclick="document.getElementById('photo-ext-input').click()">
+          📷 Prendre / importer une photo
+        </button>
+        <input type="file" id="photo-ext-input" accept="image/*" capture="environment"
+          style="display:none" onchange="handlePhoto(this,'exterieur')">
+        <div id="photo-exterieur-preview" class="photo-preview">
+          <img id="photo-exterieur-img" alt="Photo extérieur">
+          <button type="button" class="btn-photo-del" onclick="clearPhoto('exterieur')" title="Supprimer">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="card">
+      <div class="card-title">Signatures</div>
+      <div class="field">
+        <div class="sig-lbl">Signature responsable</div>
+        <div class="sig-wrap" id="sig-wrap-resp-v">
+          <canvas id="sig-resp-v"></canvas>
+          <div class="sig-hint" id="sig-hint-resp-v">
+            <div class="sig-hint-ico">✍️</div>
+            <div class="sig-hint-txt">Signer ici</div>
+          </div>
+        </div>
+        <div class="sig-act">
+          <button class="sig-clear" type="button" onclick="clearSig('resp-v')">Effacer</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="sig-lbl">Signature conducteur</div>
+        <div class="sig-wrap" id="sig-wrap-cond-v">
+          <canvas id="sig-cond-v"></canvas>
+          <div class="sig-hint" id="sig-hint-cond-v">
+            <div class="sig-hint-ico">✍️</div>
+            <div class="sig-hint-txt">Signer ici</div>
+          </div>
+        </div>
+        <div class="sig-act">
+          <button class="sig-clear" type="button" onclick="clearSig('cond-v')">Effacer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-v" class="form-status"></div>
+    <button class="btn-valider" id="btn-valider-v" onclick="validerVehicule()">Valider la fiche</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ FORM PAPIER ══ -->
+<div id="screen-papier" class="screen">
+  <div class="form-wrap">
+    <div class="form-back">
+      <button class="btn-back" onclick="showAccueil()">&#8592; Retour</button>
+      <span class="form-title">Contrôle papier</span>
+    </div>
+
+    <!-- Identité -->
+    <div class="card">
+      <div class="card-title">Identification</div>
+      <div class="field">
+        <div class="date-row">
+          <label for="date-p">Date</label>
+          <input class="fi" type="date" id="date-p">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="immat-p">Immatriculation</label>
+        <input class="fi" type="text" id="immat-p" placeholder="AA-123-BB"
+          autocomplete="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="field-label" for="nom-p">Nom</label>
+        <input class="fi" type="text" id="nom-p" placeholder="DUPONT" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label" for="prenom-p">Prénom</label>
+        <input class="fi" type="text" id="prenom-p" placeholder="Jean" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="card">
+      <div class="card-title">Documents présents</div>
+
+      <!-- Carte grise -->
+      <div class="field toggle-row">
+        <span class="field-label">Carte grise</span>
+        <button class="sw" id="carte-grise-p" type="button" onclick="toggleOuiNon(this)"></button>
+        <span class="toggle-val">Non</span>
+      </div>
+
+      <!-- Assurance -->
+      <div class="field" style="border-top:1px solid var(--border-light);padding-top:10px">
+        <div class="toggle-row" style="padding-top:0">
+          <span class="field-label">Assurance</span>
+          <button class="sw" id="assurance-p" type="button"
+            data-sub="sub-assurance" onclick="toggleOuiNon(this)"></button>
+          <span class="toggle-val">Non</span>
+        </div>
+        <div id="sub-assurance" class="toggle-sub" hidden>
+          <label class="field-label" for="detail-assurance">Détail assurance</label>
+          <input class="fi" type="text" id="detail-assurance" placeholder="Compagnie, N° police…">
+        </div>
+      </div>
+
+      <!-- Carte Total -->
+      <div class="field" style="border-top:1px solid var(--border-light);padding-top:10px">
+        <div class="toggle-row" style="padding-top:0">
+          <span class="field-label">Carte Total</span>
+          <button class="sw" id="carte-total-p" type="button"
+            data-sub="sub-carte-total" onclick="toggleOuiNon(this)"></button>
+          <span class="toggle-val">Non</span>
+        </div>
+        <div id="sub-carte-total" class="toggle-sub" hidden>
+          <label class="field-label" for="num-carte-total-p">Numéro de carte</label>
+          <input class="fi" type="text" id="num-carte-total-p" placeholder="Numéro de carte Total">
+        </div>
+      </div>
+
+      <!-- Permis / licence -->
+      <div class="field" style="border-top:1px solid var(--border-light);padding-top:10px">
+        <div class="toggle-row" style="padding-top:0">
+          <span class="field-label">Permis / licence</span>
+          <button class="sw" id="permis-p" type="button"
+            data-sub="sub-permis" onclick="toggleOuiNon(this)"></button>
+          <span class="toggle-val">Non</span>
+        </div>
+        <div id="sub-permis" class="toggle-sub" hidden>
+          <label class="field-label" for="detail-permis">Détail licence</label>
+          <input class="fi" type="text" id="detail-permis" placeholder="Type, numéro, validité…">
+        </div>
+      </div>
+
+      <!-- Feuille de location -->
+      <div class="field toggle-row" style="border-top:1px solid var(--border-light);padding-top:10px">
+        <span class="field-label">Feuille de location</span>
+        <button class="sw" id="feuille-loc-p" type="button" onclick="toggleOuiNon(this)"></button>
+        <span class="toggle-val">Non</span>
+      </div>
+
+      <!-- 2 constats -->
+      <div class="field toggle-row" style="border-top:1px solid var(--border-light);padding-top:10px">
+        <span class="field-label">2 constats</span>
+        <button class="sw" id="constats-p" type="button" onclick="toggleOuiNon(this)"></button>
+        <span class="toggle-val">Non</span>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="card">
+      <div class="card-title">Signatures</div>
+      <div class="field">
+        <div class="sig-lbl">Signature responsable</div>
+        <div class="sig-wrap" id="sig-wrap-resp-p">
+          <canvas id="sig-resp-p"></canvas>
+          <div class="sig-hint" id="sig-hint-resp-p">
+            <div class="sig-hint-ico">✍️</div>
+            <div class="sig-hint-txt">Signer ici</div>
+          </div>
+        </div>
+        <div class="sig-act">
+          <button class="sig-clear" type="button" onclick="clearSig('resp-p')">Effacer</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="sig-lbl">Signature conducteur</div>
+        <div class="sig-wrap" id="sig-wrap-cond-p">
+          <canvas id="sig-cond-p"></canvas>
+          <div class="sig-hint" id="sig-hint-cond-p">
+            <div class="sig-hint-ico">✍️</div>
+            <div class="sig-hint-txt">Signer ici</div>
+          </div>
+        </div>
+        <div class="sig-act">
+          <button class="sig-clear" type="button" onclick="clearSig('cond-p')">Effacer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-p" class="form-status"></div>
+    <button class="btn-valider" id="btn-valider-p" onclick="validerPapier()">Valider la fiche</button>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 'use strict';
 
-var pads     = {};
-var rowCount = 0;
-var depots   = [];
+/* ═══════════════════════════════════════════════════════ ÉTAT GLOBAL ══ */
+var pads   = {};
+var photos = { interieur: null, exterieur: null };
 
-/* ── Chargement dépôts ── */
-fetch('/api/depots').then(function(r) { return r.json(); }).then(function(list) {
-  depots = Array.isArray(list) ? list : [];
-}).catch(function() { depots = []; });
-
-/* ── Helpers ── */
+/* ══════════════════════════════════════════════════════════ HELPERS ══ */
 function pad2(n) { return String(n).padStart(2, '0'); }
+function $id(id) { return document.getElementById(id); }
+function fieldVal(id) { var el = $id(id); return el ? el.value.trim() : ''; }
+function toggleOn(id)  { var el = $id(id); return el ? el.classList.contains('on') : false; }
 
-/* ── Base64 (même implémentation que feuille_heure_v4.html) ── */
+/* ── Base64 safe (contourne lone-surrogate bug de jsPDF) ── */
 function uint8ArrayToBase64(uint8) {
   var B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  var len = uint8.length;
-  var out = new Array(Math.ceil(len / 3) * 4);
-  var i = 0, ri = 0;
+  var len = uint8.length, out = new Array(Math.ceil(len / 3) * 4), i = 0, ri = 0;
   while (i < len) {
     var b0 = uint8[i++];
     var hasB1 = i < len, b1 = hasB1 ? uint8[i++] : 0;
@@ -209,148 +463,112 @@ function uint8ArrayToBase64(uint8) {
   return out.join('');
 }
 
-/* ── Génération PDF contrôle véhicule ── */
-function _buildPDFControle(doc, data) {
-  var W = 210, m = 16, y = 0;
-  var NAVY = [26, 47, 90], NAVY2 = [30, 58, 115];
-  var BLEU = [37, 99, 235], GRIS = [200, 200, 200], NOIR = [30, 30, 30];
-
-  // ── EN-TÊTE ──
-  doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
-  doc.rect(0, 0, W, 32, 'F');
-  doc.setFillColor(BLEU[0], BLEU[1], BLEU[2]);
-  doc.rect(0, 30, W, 2, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-  doc.text('Contrôle Véhicule', m, 13);
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.setTextColor(200, 215, 240);
-  doc.text('DSN Transports · AEL Services', m, 21);
-
-  // Date et heure bien visibles en haut à droite
-  doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text(data.dateControle, W - m, 12, { align: 'right' });
-  doc.setFontSize(10);
-  doc.text(data.heureControle, W - m, 20, { align: 'right' });
-
-  y = 40;
-
-  // ── Badge mode ──
-  var modeTxt = data.mode === 'complet' ? 'Mode complet' : 'Mode rapide';
-  doc.setFillColor(data.mode === 'complet' ? BLEU[0] : 100, data.mode === 'complet' ? BLEU[1] : 116, data.mode === 'complet' ? BLEU[2] : 139);
-  doc.roundedRect(m, y - 5, 30, 7, 2, 2, 'F');
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-  doc.text(modeTxt, m + 15, y, { align: 'center' });
-  y += 7;
-
-  // ── Bloc infos véhicule ──
-  function row(label, val) {
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.setTextColor(BLEU[0], BLEU[1], BLEU[2]);
-    doc.text(label, m, y);
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
-    doc.text(String(val || '—'), m + 52, y);
-    y += 7;
-  }
-
-  row('Immatriculation :', data.immatriculation);
-  row('Conducteur :', data.conducteur);
-  y += 2;
-
-  // ── Séparateur ──
-  doc.setDrawColor(GRIS[0], GRIS[1], GRIS[2]); doc.setLineWidth(0.3);
-  doc.line(m, y, W - m, y); y += 7;
-
-  // ── Checks ──
-  function check(label, val) {
-    var ok = val === true || val === 'Oui' || val === 'oui';
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.setFillColor(ok ? 34 : 239, ok ? 197 : 68, ok ? 94 : 68);
-    doc.circle(m + 2, y - 1.5, 2.2, 'F');
-    doc.setTextColor(BLEU[0], BLEU[1], BLEU[2]);
-    doc.text(label, m + 7, y);
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
-    doc.text(ok ? 'Oui' : 'Non', m + 52, y);
-    y += 7;
-  }
-
-  check('Sangle :', data.sangle);
-
-  if (data.mode === 'complet') {
-    check('Carte Total :', data.carteTotal);
-    if (data.carteTotal && data.numCarteTotal) {
-      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
-      doc.text('N° carte Total : ' + data.numCarteTotal, m + 7, y); y += 6;
-    }
-    check('Assurance :', data.assurance);
-    if (data.assurance && data.numAssurance) {
-      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
-      doc.text('Réf. assurance : ' + data.numAssurance, m + 7, y); y += 6;
-    }
-    row('Dépôt :', data.depot);
-  }
-
-  y += 3;
-  doc.setDrawColor(GRIS[0], GRIS[1], GRIS[2]); doc.setLineWidth(0.3);
-  doc.line(m, y, W - m, y); y += 10;
-
-  // ── Signatures côte à côte ──
-  var sigW = (W - 2 * m - 10) / 2;
-  var sigH = 32;
-
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(BLEU[0], BLEU[1], BLEU[2]);
-  doc.text('Signature responsable', m, y);
-  doc.text('Signature conducteur', m + sigW + 10, y);
-  y += 4;
-
-  doc.setDrawColor(GRIS[0], GRIS[1], GRIS[2]); doc.setFillColor(248, 250, 252);
-  doc.roundedRect(m, y, sigW, sigH, 2, 2, 'FD');
-  doc.roundedRect(m + sigW + 10, y, sigW, sigH, 2, 2, 'FD');
-
-  if (data.sigResponsable) {
-    try { doc.addImage(data.sigResponsable, 'PNG', m + 1, y + 1, sigW - 2, sigH - 2); } catch(e) {}
-  }
-  if (data.sigConducteur) {
-    try { doc.addImage(data.sigConducteur, 'PNG', m + sigW + 11, y + 1, sigW - 2, sigH - 2); } catch(e) {}
-  }
-  y += sigH + 10;
-
-  // ── Pied de page ──
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 180, 180);
-  var genDate = new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-  doc.text('Document généré le ' + genDate + ' — DSN Transports', m, y);
+/* ══════════════════════════════════════════════════ GESTION ÉCRANS ══ */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  $id('screen-' + name).classList.add('active');
+  $id('accueil-msg').className = 'accueil-msg'; // cache le msg accueil
+  window.scrollTo(0, 0);
+  setTimeout(function() {
+    if (name === 'vehicule') { initPad('resp-v'); initPad('cond-v'); }
+    if (name === 'papier')   { initPad('resp-p'); initPad('cond-p'); }
+  }, 50);
 }
 
-function genererPDFControle(data) {
-  if (!window.jspdf) return '';
-  try {
-    var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    _buildPDFControle(doc, data);
-    var ab = doc.output('arraybuffer');
-    if (!ab || ab.byteLength === 0) return '';
-    return uint8ArrayToBase64(new Uint8Array(ab));
-  } catch(e) {
-    console.error('[CV] PDF erreur :', e);
-    return '';
+function showAccueil() {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  $id('screen-accueil').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showAccueilMsg(type, msg) {
+  var el = $id('accueil-msg');
+  el.textContent = msg;
+  el.className = 'accueil-msg ' + (type === 'ok' ? 'ok' : 'err');
+}
+
+function showFormStatus(form, type, msg) {
+  var el = $id('status-' + form);
+  if (!el) return;
+  if (!type) { el.className = 'form-status'; return; }
+  el.textContent = msg;
+  el.className = 'form-status ' + (type === 'ok' ? 'ok' : 'err');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* ══════════════════════════════════════════════════ TOGGLE OUI/NON ══ */
+function toggleOuiNon(btn) {
+  var isOn    = btn.classList.toggle('on');
+  var valSpan = btn.nextElementSibling;
+  if (valSpan) valSpan.textContent = isOn ? 'Oui' : 'Non';
+  var subId = btn.dataset.sub;
+  if (subId) {
+    var sub = $id(subId);
+    if (sub) {
+      sub.hidden = !isOn;
+      if (!isOn) {
+        var inp = sub.querySelector('input,textarea');
+        if (inp) inp.value = '';
+      }
+    }
   }
 }
 
-/* ── Signature pad ── */
+/* ══════════════════════════════════════════════════════════ PHOTOS ══ */
+function resizeImageFile(file, maxDim, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else        { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback({ dataUrl: c.toDataURL('image/jpeg', quality), w: w, h: h });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handlePhoto(input, slot) {
+  if (!input.files || !input.files[0]) return;
+  resizeImageFile(input.files[0], 1200, 0.82, function(result) {
+    photos[slot] = result;
+    var previewDiv = $id('photo-' + slot + '-preview');
+    var previewImg = $id('photo-' + slot + '-img');
+    if (previewImg) previewImg.src = result.dataUrl;
+    if (previewDiv) previewDiv.classList.add('visible');
+  });
+  input.value = '';
+}
+
+function clearPhoto(slot) {
+  photos[slot] = null;
+  var previewDiv = $id('photo-' + slot + '-preview');
+  if (previewDiv) previewDiv.classList.remove('visible');
+  var previewImg = $id('photo-' + slot + '-img');
+  if (previewImg) previewImg.src = '';
+}
+
+/* ═══════════════════════════════════════════════════ SIGNATURE PAD ══ */
 function initPad(id) {
-  var canvas = document.getElementById('sig-' + id);
-  var wrap   = document.getElementById('sig-wrap-' + id);
-  var hint   = document.getElementById('sig-hint-' + id);
+  var canvas = $id('sig-' + id);
+  var wrap   = $id('sig-wrap-' + id);
+  var hint   = $id('sig-hint-' + id);
   if (!canvas || !wrap) return;
-  if (pads[id]) pads[id] = null;
+  pads[id] = null;
   var ctx = canvas.getContext('2d');
   var drawing = false, hasSig = false;
   function resize() {
     var r = window.devicePixelRatio || 1;
     var w = wrap.getBoundingClientRect().width || wrap.offsetWidth || 280;
     if (w < 10) w = 280;
-    canvas.width  = w * r; canvas.height = 100 * r;
+    canvas.width = w * r; canvas.height = 100 * r;
     canvas.style.width = w + 'px'; canvas.style.height = '100px';
     ctx.scale(r, r); ctx.lineWidth = 2; ctx.lineCap = 'round';
     ctx.lineJoin = 'round'; ctx.strokeStyle = '#1A1A18';
@@ -373,7 +591,11 @@ function initPad(id) {
   canvas.addEventListener('touchend',   stop,  { passive: false });
   pads[id] = {
     has: function() { return hasSig; },
-    clear: function() { ctx.clearRect(0, 0, canvas.width, canvas.height); hasSig = false; if (hint) hint.style.opacity = '1'; },
+    clear: function() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasSig = false;
+      if (hint) hint.style.opacity = '1';
+    },
     img: function() {
       var tmp = document.createElement('canvas');
       tmp.width = canvas.width; tmp.height = canvas.height;
@@ -381,288 +603,391 @@ function initPad(id) {
       c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, tmp.width, tmp.height);
       c2.drawImage(canvas, 0, 0);
       return tmp.toDataURL('image/png');
-    }
+    },
   };
 }
 
 function clearSig(id) { if (pads[id]) pads[id].clear(); }
 
-/* ── Toggle sangle ── */
-function toggleSangle(btn) {
-  var on = btn.classList.contains('on');
-  btn.classList.toggle('on', !on);
-  btn.nextElementSibling.textContent = on ? 'Non' : 'Oui';
-}
-
-/* ── Toggle mode rapide/complet ── */
-function toggleMode(btn) {
-  var isComplet = btn.classList.toggle('complet');
-  btn.textContent = isComplet ? '✔ Complet' : '⚡ Rapide';
-  var card = btn.closest('.vc-card');
-  card.querySelector('.complet-section').hidden = !isComplet;
-}
-
-/* ── Toggle sous-champ conditionnel (numéro carte / assurance) ── */
-function toggleSubField(chk, subId) {
-  var sub = document.getElementById(subId);
-  if (sub) sub.hidden = !chk.checked;
-  if (!chk.checked && sub) {
-    var inp = sub.querySelector('input');
-    if (inp) inp.value = '';
-  }
-}
-
-/* ── Numérotation visuelle ── */
-function renumberCards() {
-  document.querySelectorAll('.vc-card .vc-card-num').forEach(function(el, i) {
-    el.textContent = 'Véhicule ' + (i + 1);
+/* ═══════════════════════════════════════════════════ RESET FORMS ══ */
+function resetFormVehicule() {
+  ['immat-v','nom-v','prenom-v','etat-int','etat-ext'].forEach(function(id) {
+    var el = $id(id); if (el) el.value = '';
   });
-}
-
-/* ── Ajout d'une ligne véhicule ── */
-function addLigne(doScroll) {
-  var idx = rowCount++;
-  var div = document.createElement('div');
-  div.className = 'vc-card';
-  div.id = 'vc-card-' + idx;
-
-  div.innerHTML =
-    '<div class="vc-card-head">' +
-      '<span class="vc-card-num">Véhicule 1</span>' +
-      '<div class="head-right">' +
-        '<button class="mode-btn" type="button" onclick="toggleMode(this)">⚡ Rapide</button>' +
-        '<button class="btn-del" type="button" onclick="removeLigne(this)">✕</button>' +
-      '</div>' +
-    '</div>' +
-    '<div class="vc-card-body">' +
-      '<div class="field">' +
-        '<label class="field-label">Immatriculation</label>' +
-        '<input class="fi" type="text" data-field="immatriculation" placeholder="AA-123-BB" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
-      '</div>' +
-      '<div class="field">' +
-        '<label class="field-label">Conducteur</label>' +
-        '<input class="fi" type="text" data-field="conducteur" placeholder="Nom Prénom" autocomplete="off">' +
-      '</div>' +
-      '<div class="field field-sangle">' +
-        '<span class="field-label">Sangle présente</span>' +
-        '<button class="sw" type="button" onclick="toggleSangle(this)"></button>' +
-        '<span class="sangle-val">Non</span>' +
-      '</div>' +
-
-      // ── Section mode complet (masquée par défaut) ──
-      '<div class="complet-section" id="complet-' + idx + '" hidden>' +
-        '<div class="complet-sep"><span>Champs complémentaires</span></div>' +
-
-        // Carte Total
-        '<div class="field field-check">' +
-          '<input class="chk" type="checkbox" id="carte-chk-' + idx + '" ' +
-            'onchange="toggleSubField(this, \'num-carte-' + idx + '\')">' +
-          '<label class="field-label" for="carte-chk-' + idx + '">Carte Total présente</label>' +
-        '</div>' +
-        '<div class="field complet-sub" id="num-carte-' + idx + '" hidden>' +
-          '<label class="field-label">Numéro de carte Total</label>' +
-          '<input class="fi" type="text" data-field="num-carte-total" placeholder="Numéro de carte">' +
-        '</div>' +
-
-        // Assurance
-        '<div class="field field-check">' +
-          '<input class="chk" type="checkbox" id="assurance-chk-' + idx + '" ' +
-            'onchange="toggleSubField(this, \'num-assurance-' + idx + '\')">' +
-          '<label class="field-label" for="assurance-chk-' + idx + '">Assurance présente</label>' +
-        '</div>' +
-        '<div class="field complet-sub" id="num-assurance-' + idx + '" hidden>' +
-          '<label class="field-label">Numéro / référence assurance</label>' +
-          '<input class="fi" type="text" data-field="num-assurance" placeholder="Référence assurance">' +
-        '</div>' +
-
-        // Dépôt
-        '<div class="field">' +
-          '<label class="field-label">Dépôt de rattachement</label>' +
-          '<select class="fi" data-field="depot" id="depot-' + idx + '">' +
-          '</select>' +
-        '</div>' +
-      '</div>' +
-
-      // ── Signatures ──
-      '<div class="field">' +
-        '<div class="sig-lbl">Signature responsable</div>' +
-        '<div class="sig-wrap" id="sig-wrap-resp-' + idx + '">' +
-          '<canvas id="sig-resp-' + idx + '"></canvas>' +
-          '<div class="sig-hint" id="sig-hint-resp-' + idx + '">' +
-            '<div class="sig-hint-ico">✍️</div>' +
-            '<div class="sig-hint-txt">Signer ici</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="sig-act"><button class="sig-clear" type="button" onclick="clearSig(\'resp-' + idx + '\')">Effacer</button></div>' +
-      '</div>' +
-      '<div class="field">' +
-        '<div class="sig-lbl">Signature conducteur</div>' +
-        '<div class="sig-wrap" id="sig-wrap-cond-' + idx + '">' +
-          '<canvas id="sig-cond-' + idx + '"></canvas>' +
-          '<div class="sig-hint" id="sig-hint-cond-' + idx + '">' +
-            '<div class="sig-hint-ico">✍️</div>' +
-            '<div class="sig-hint-txt">Signer ici</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="sig-act"><button class="sig-clear" type="button" onclick="clearSig(\'cond-' + idx + '\')">Effacer</button></div>' +
-      '</div>' +
-    '</div>' +
-    '<div class="vc-card-footer">' +
-      '<button class="btn-add-after" type="button" onclick="addLigne(true)">+ Ajouter un contrôle</button>' +
-    '</div>';
-
-  document.getElementById('vc-list').appendChild(div);
-  renumberCards();
-
-  // Peupler le select dépôt
-  var sel = document.getElementById('depot-' + idx);
-  if (sel) {
-    (depots.length ? depots : ['Non renseigné']).forEach(function(d) {
-      var opt = document.createElement('option');
-      opt.value = d; opt.textContent = d;
-      sel.appendChild(opt);
-    });
-  }
-
-  initPad('resp-' + idx);
-  initPad('cond-' + idx);
-  if (doScroll) div.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-/* ── Suppression d'une ligne ── */
-function removeLigne(btn) {
-  var card = btn.closest('.vc-card');
-  var idx  = card.id.replace('vc-card-', '');
-  delete pads['resp-' + idx];
-  delete pads['cond-' + idx];
-  card.remove();
-  renumberCards();
-}
-
-/* ── Message statut ── */
-function showStatus(type, msg) {
-  var el = document.getElementById('status-bar');
-  el.textContent = msg;
-  el.className = 'status ' + (type === 'ok' ? 'ok' : 'err');
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-/* ── Envoi global ── */
-async function envoyerTout() {
-  var cards  = document.querySelectorAll('.vc-card');
-  var date   = document.getElementById('date-controle').value;
-  var now    = new Date();
-  var heureControle = pad2(now.getHours()) + 'h' + pad2(now.getMinutes());
-
-  var lignes  = [];
-  var errCard = null;
-  var errMsg  = '';
-
-  cards.forEach(function(card) {
-    if (errCard) return;
-    var idx    = card.id.replace('vc-card-', '');
-    var immat  = card.querySelector('[data-field="immatriculation"]').value.trim().toUpperCase();
-    var cond   = card.querySelector('[data-field="conducteur"]').value.trim();
-    if (!immat || !cond) { errCard = card; errMsg = 'Remplissez l\'immatriculation et le nom du conducteur pour chaque véhicule.'; return; }
-
-    var isComplet   = card.querySelector('.mode-btn').classList.contains('complet');
-    var mode        = isComplet ? 'complet' : 'rapide';
-    var sangle      = card.querySelector('.sw').classList.contains('on');
-
-    var carteTotal    = isComplet && document.getElementById('carte-chk-' + idx).checked;
-    var numCarteTotal = carteTotal ? (card.querySelector('[data-field="num-carte-total"]').value.trim()) : '';
-    var assurance     = isComplet && document.getElementById('assurance-chk-' + idx).checked;
-    var numAssurance  = assurance ? (card.querySelector('[data-field="num-assurance"]').value.trim()) : '';
-    var depot         = isComplet ? (document.getElementById('depot-' + idx).value) : '';
-
-    if (carteTotal && !numCarteTotal) { errCard = card; errMsg = 'Numéro de carte Total obligatoire (Carte Total cochée).'; return; }
-    if (assurance  && !numAssurance)  { errCard = card; errMsg = 'Numéro / référence assurance obligatoire (Assurance cochée).'; return; }
-
-    var rPad = pads['resp-' + idx];
-    var cPad = pads['cond-' + idx];
-
-    lignes.push({
-      immatriculation:     immat,
-      conducteur:          cond,
-      date:                date,
-      heureControle:       heureControle,
-      mode:                mode,
-      sangle:              sangle,
-      carteTotal:          carteTotal,
-      numCarteTotal:       numCarteTotal,
-      assurance:           assurance,
-      numAssurance:        numAssurance,
-      depot:               depot,
-      signatureResponsable: rPad && rPad.has() ? rPad.img() : '',
-      signatureConducteur:  cPad && cPad.has() ? cPad.img() : '',
-      // champs pour le PDF (y compris signatures déjà extraites)
-      _sigResp: rPad && rPad.has() ? rPad.img() : '',
-      _sigCond: cPad && cPad.has() ? cPad.img() : '',
-    });
+  ['sangle-v','roue-secours-v'].forEach(function(id) {
+    var btn = $id(id);
+    if (btn) {
+      btn.classList.remove('on');
+      var span = btn.nextElementSibling;
+      if (span) span.textContent = 'Non';
+    }
   });
+  clearPhoto('interieur'); clearPhoto('exterieur');
+  if (pads['resp-v']) pads['resp-v'].clear();
+  if (pads['cond-v']) pads['cond-v'].clear();
+  showFormStatus('v', '', '');
+  var d = $id('date-v'); if (d) d.valueAsDate = new Date();
+}
 
-  if (errCard) {
-    errCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showStatus('err', errMsg);
-    return;
+function resetFormPapier() {
+  ['immat-p','nom-p','prenom-p','detail-assurance','num-carte-total-p','detail-permis'].forEach(function(id) {
+    var el = $id(id); if (el) el.value = '';
+  });
+  ['carte-grise-p','assurance-p','carte-total-p','permis-p','feuille-loc-p','constats-p'].forEach(function(id) {
+    var btn = $id(id);
+    if (btn) {
+      btn.classList.remove('on');
+      var span = btn.nextElementSibling;
+      if (span) span.textContent = 'Non';
+    }
+  });
+  ['sub-assurance','sub-carte-total','sub-permis'].forEach(function(id) {
+    var el = $id(id); if (el) el.hidden = true;
+  });
+  if (pads['resp-p']) pads['resp-p'].clear();
+  if (pads['cond-p']) pads['cond-p'].clear();
+  showFormStatus('p', '', '');
+  var d = $id('date-p'); if (d) d.valueAsDate = new Date();
+}
+
+/* ═══════════════════════════════════════════════ GÉNÉRATION PDF ══ */
+var NAVY = [26,47,90], NAVY2 = [30,58,115], BLEU = [37,99,235];
+var GRIS = [200,200,200], NOIR = [30,30,30], VERT = [34,197,94], ROUGE = [239,68,68];
+
+function pdfHeader(doc, titre, dateControle, heureControle) {
+  var W = 210, m = 16;
+  doc.setFillColor(NAVY[0],NAVY[1],NAVY[2]);
+  doc.rect(0,0,W,32,'F');
+  doc.setFillColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.rect(0,30,W,2,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text(titre, m, 13);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.setTextColor(200,215,240);
+  doc.text('DSN Transports · AEL Services', m, 21);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.setTextColor(255,255,255);
+  doc.text(dateControle, W-m, 12, { align:'right' });
+  doc.setFontSize(10);
+  doc.text(heureControle, W-m, 20, { align:'right' });
+}
+
+function pdfCheckY(doc, y, need) {
+  if (y + (need||15) > 278) { doc.addPage(); return 20; }
+  return y;
+}
+
+function pdfRow(doc, label, val, m, y) {
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.text(label, m, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+  doc.text(String(val||'—'), m+52, y);
+  return y+7;
+}
+
+function pdfCheck(doc, label, val, m, y) {
+  var ok = val === true || val === 'Oui';
+  doc.setFillColor(ok?VERT[0]:ROUGE[0], ok?VERT[1]:ROUGE[1], ok?VERT[2]:ROUGE[2]);
+  doc.circle(m+2, y-1.5, 2.2, 'F');
+  doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.text(label, m+7, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+  doc.text(ok?'Oui':'Non', m+52, y);
+  return y+7;
+}
+
+function pdfSigs(doc, data, y) {
+  var W = 210, m = 16;
+  var sigW = (W-2*m-10)/2, sigH = 32;
+  doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.text('Signature responsable', m, y);
+  doc.text('Signature conducteur', m+sigW+10, y);
+  y += 4;
+  doc.setDrawColor(GRIS[0],GRIS[1],GRIS[2]); doc.setFillColor(248,250,252);
+  doc.roundedRect(m, y, sigW, sigH, 2, 2, 'FD');
+  doc.roundedRect(m+sigW+10, y, sigW, sigH, 2, 2, 'FD');
+  if (data.sigResponsable) {
+    try { doc.addImage(data.sigResponsable,'PNG',m+1,y+1,sigW-2,sigH-2); } catch(e) {}
   }
-  if (!lignes.length) { showStatus('err', 'Ajoutez au moins un véhicule.'); return; }
-
-  var btn = document.getElementById('btn-envoyer');
-  btn.disabled = true;
-  btn.textContent = 'Génération PDF…';
-
-  // Générer un PDF par ligne
-  var dateLabel = date || now.toISOString().slice(0, 10);
-  for (var i = 0; i < lignes.length; i++) {
-    var l = lignes[i];
-    var pdfData = {
-      immatriculation: l.immatriculation,
-      conducteur:      l.conducteur,
-      dateControle:    dateLabel,
-      heureControle:   l.heureControle,
-      mode:            l.mode,
-      sangle:          l.sangle,
-      carteTotal:      l.carteTotal,
-      numCarteTotal:   l.numCarteTotal,
-      assurance:       l.assurance,
-      numAssurance:    l.numAssurance,
-      depot:           l.depot,
-      sigResponsable:  l._sigResp,
-      sigConducteur:   l._sigCond,
-    };
-    var b64 = genererPDFControle(pdfData);
-    if (b64) l.pdf_base64 = b64;
-    delete l._sigResp;
-    delete l._sigCond;
+  if (data.sigConducteur) {
+    try { doc.addImage(data.sigConducteur,'PNG',m+sigW+11,y+1,sigW-2,sigH-2); } catch(e) {}
   }
+  y += sigH+10;
+  doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(180,180,180);
+  var now = new Date();
+  doc.text('Document généré le '+now.toLocaleDateString('fr-FR')+' à '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+' — DSN Transports', m, y);
+  return y;
+}
 
-  btn.textContent = 'Envoi en cours…';
+function buildPDFVehicule(data) {
+  var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  var W = 210, m = 16;
+  pdfHeader(doc, 'Contrôle Véhicule', data.dateControle, data.heureControle);
+  var y = 40;
 
+  // Badge type
+  doc.setFillColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.roundedRect(m, y-5, 24, 7, 2, 2, 'F');
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('Véhicule', m+12, y, { align:'center' });
+  y += 8;
+
+  y = pdfRow(doc, 'Immatriculation :', data.immatriculation, m, y);
+  y = pdfRow(doc, 'Nom :', data.nom, m, y);
+  y = pdfRow(doc, 'Prénom :', data.prenom, m, y);
+  y += 2;
+  doc.setDrawColor(GRIS[0],GRIS[1],GRIS[2]); doc.setLineWidth(0.3);
+  doc.line(m, y, W-m, y); y += 7;
+
+  y = pdfCheck(doc, 'Sangle', data.sangle, m, y);
+  y = pdfCheck(doc, 'Roue de secours', data.roueSecours, m, y);
+  y += 3;
+  doc.line(m, y, W-m, y); y += 8;
+
+  // État intérieur
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.text('État intérieur', m, y); y += 5;
+  if (data.etatInterieur) {
+    doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+    var lines = doc.splitTextToSize(data.etatInterieur, W-2*m);
+    y = pdfCheckY(doc, y, lines.length*5+2);
+    doc.text(lines, m, y); y += lines.length*5+3;
+  }
+  if (data.photoInterieur) {
+    var p = data.photoInterieur;
+    var maxW = W-2*m, ratio = p.h/p.w;
+    var iW = maxW, iH = iW*ratio;
+    if (iH > 75) { iH = 75; iW = iH/ratio; }
+    y = pdfCheckY(doc, y, iH+5);
+    try { doc.addImage(p.dataUrl,'JPEG',m+(maxW-iW)/2,y,iW,iH); y += iH+5; } catch(e) {}
+  }
+  y += 2;
+
+  // État extérieur
+  y = pdfCheckY(doc, y, 15);
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(BLEU[0],BLEU[1],BLEU[2]);
+  doc.text('État extérieur', m, y); y += 5;
+  if (data.etatExterieur) {
+    doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+    var linesE = doc.splitTextToSize(data.etatExterieur, W-2*m);
+    y = pdfCheckY(doc, y, linesE.length*5+2);
+    doc.text(linesE, m, y); y += linesE.length*5+3;
+  }
+  if (data.photoExterieur) {
+    var pe = data.photoExterieur;
+    var maxWe = W-2*m, ratioE = pe.h/pe.w;
+    var iWe = maxWe, iHe = iWe*ratioE;
+    if (iHe > 75) { iHe = 75; iWe = iHe/ratioE; }
+    y = pdfCheckY(doc, y, iHe+5);
+    try { doc.addImage(pe.dataUrl,'JPEG',m+(maxWe-iWe)/2,y,iWe,iHe); y += iHe+5; } catch(e) {}
+  }
+  y += 3;
+  y = pdfCheckY(doc, y, 50);
+  doc.setDrawColor(GRIS[0],GRIS[1],GRIS[2]); doc.setLineWidth(0.3);
+  doc.line(m, y, W-m, y); y += 8;
+  pdfSigs(doc, data, y);
+  return doc;
+}
+
+function buildPDFPapier(data) {
+  var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  var W = 210, m = 16;
+  pdfHeader(doc, 'Contrôle Papier', data.dateControle, data.heureControle);
+  var y = 40;
+
+  // Badge type
+  var amber = [180, 83, 9];
+  doc.setFillColor(amber[0],amber[1],amber[2]);
+  doc.roundedRect(m, y-5, 20, 7, 2, 2, 'F');
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('Papier', m+10, y, { align:'center' });
+  y += 8;
+
+  y = pdfRow(doc, 'Immatriculation :', data.immatriculation, m, y);
+  y = pdfRow(doc, 'Nom :', data.nom, m, y);
+  y = pdfRow(doc, 'Prénom :', data.prenom, m, y);
+  y += 2;
+  doc.setDrawColor(GRIS[0],GRIS[1],GRIS[2]); doc.setLineWidth(0.3);
+  doc.line(m, y, W-m, y); y += 7;
+
+  y = pdfCheck(doc, 'Carte grise', data.carteGrise, m, y);
+  y = pdfCheck(doc, 'Assurance', data.assurance, m, y);
+  if (data.detailAssurance) {
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+    doc.text('→ '+data.detailAssurance, m+7, y); y += 5;
+  }
+  y = pdfCheck(doc, 'Carte Total', data.carteTotal, m, y);
+  if (data.numCarteTotal) {
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+    doc.text('→ '+data.numCarteTotal, m+7, y); y += 5;
+  }
+  y = pdfCheck(doc, 'Permis / licence', data.permis, m, y);
+  if (data.detailPermis) {
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(NOIR[0],NOIR[1],NOIR[2]);
+    doc.text('→ '+data.detailPermis, m+7, y); y += 5;
+  }
+  y = pdfCheck(doc, 'Feuille de location', data.feuilleLocation, m, y);
+  y = pdfCheck(doc, '2 constats', data.constats, m, y);
+
+  y += 5;
+  doc.line(m, y, W-m, y); y += 8;
+  pdfSigs(doc, data, y);
+  return doc;
+}
+
+function genererPDF(type, data) {
+  if (!window.jspdf) return '';
   try {
-    var r = await fetch('/api/controle-vehicule', {
+    var doc = type === 'vehicule' ? buildPDFVehicule(data) : buildPDFPapier(data);
+    var ab = doc.output('arraybuffer');
+    if (!ab || ab.byteLength === 0) return '';
+    return uint8ArrayToBase64(new Uint8Array(ab));
+  } catch(e) {
+    console.error('[CV] PDF erreur :', e);
+    return '';
+  }
+}
+
+/* ══════════════════════════════════════════════ SOUMISSION VÉHICULE ══ */
+async function validerVehicule() {
+  var immat  = fieldVal('immat-v').toUpperCase();
+  var nom    = fieldVal('nom-v');
+  var prenom = fieldVal('prenom-v');
+  if (!immat)         { showFormStatus('v','err','Immatriculation obligatoire.'); return; }
+  if (!nom || !prenom){ showFormStatus('v','err','Nom et prénom obligatoires.'); return; }
+
+  var dateV  = fieldVal('date-v') || new Date().toISOString().slice(0,10);
+  var now    = new Date();
+  var heure  = pad2(now.getHours())+'h'+pad2(now.getMinutes());
+
+  var sangle      = toggleOn('sangle-v');
+  var roueSecours = toggleOn('roue-secours-v');
+  var etatInt     = fieldVal('etat-int');
+  var etatExt     = fieldVal('etat-ext');
+  var sigResp     = pads['resp-v'] && pads['resp-v'].has() ? pads['resp-v'].img() : '';
+  var sigCond     = pads['cond-v'] && pads['cond-v'].has() ? pads['cond-v'].img() : '';
+
+  var btn = $id('btn-valider-v');
+  btn.disabled = true; btn.textContent = 'Génération PDF…';
+
+  var pdfData = {
+    immatriculation: immat, nom: nom, prenom: prenom,
+    dateControle: dateV, heureControle: heure,
+    sangle: sangle, roueSecours: roueSecours,
+    etatInterieur: etatInt, etatExterieur: etatExt,
+    photoInterieur: photos.interieur,
+    photoExterieur: photos.exterieur,
+    sigResponsable: sigResp, sigConducteur: sigCond,
+  };
+  var pdfB64 = genererPDF('vehicule', pdfData);
+
+  btn.textContent = 'Envoi…';
+  try {
+    var r = await fetch('/api/controle-vehicule-v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(lignes)
+      body: JSON.stringify({
+        type: 'vehicule',
+        date: dateV, heureControle: heure,
+        immatriculation: immat, nom: nom, prenom: prenom,
+        sangle: sangle, roueSecours: roueSecours,
+        etatInterieur: etatInt, etatExterieur: etatExt,
+        photoInterieurBase64: photos.interieur ? photos.interieur.dataUrl : '',
+        photoExterieurBase64: photos.exterieur ? photos.exterieur.dataUrl : '',
+        signatureResponsable: sigResp,
+        signatureConducteur:  sigCond,
+        pdf_base64: pdfB64,
+      }),
     });
     var j = await r.json().catch(function() { return {}; });
     if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
-    showStatus('ok', (j.count || lignes.length) + ' contrôle(s) enregistré(s) avec succès.');
-    document.getElementById('vc-list').innerHTML = '';
-    Object.keys(pads).forEach(function(k) { delete pads[k]; });
-    rowCount = 0;
-    addLigne();
+    resetFormVehicule();
+    showAccueil();
+    showAccueilMsg('ok', '✓ Fiche véhicule enregistrée — ' + immat);
   } catch(e) {
-    showStatus('err', 'Erreur lors de l\'envoi : ' + e.message);
+    showFormStatus('v', 'err', 'Erreur : ' + e.message);
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Envoyer';
+    btn.disabled = false; btn.textContent = 'Valider la fiche';
   }
 }
 
-/* ── Init ── */
-document.getElementById('date-controle').valueAsDate = new Date();
-addLigne();
+/* ═══════════════════════════════════════════════ SOUMISSION PAPIER ══ */
+async function validerPapier() {
+  var immat  = fieldVal('immat-p').toUpperCase();
+  var nom    = fieldVal('nom-p');
+  var prenom = fieldVal('prenom-p');
+  if (!immat)         { showFormStatus('p','err','Immatriculation obligatoire.'); return; }
+  if (!nom || !prenom){ showFormStatus('p','err','Nom et prénom obligatoires.'); return; }
+
+  var dateP  = fieldVal('date-p') || new Date().toISOString().slice(0,10);
+  var now    = new Date();
+  var heure  = pad2(now.getHours())+'h'+pad2(now.getMinutes());
+
+  var carteGrise    = toggleOn('carte-grise-p');
+  var assurance     = toggleOn('assurance-p');
+  var carteTotal    = toggleOn('carte-total-p');
+  var permis        = toggleOn('permis-p');
+  var feuilleLocation = toggleOn('feuille-loc-p');
+  var constats      = toggleOn('constats-p');
+  var detailAssurance  = assurance  ? fieldVal('detail-assurance')  : '';
+  var numCarteTotal    = carteTotal ? fieldVal('num-carte-total-p') : '';
+  var detailPermis     = permis     ? fieldVal('detail-permis')     : '';
+
+  var sigResp = pads['resp-p'] && pads['resp-p'].has() ? pads['resp-p'].img() : '';
+  var sigCond = pads['cond-p'] && pads['cond-p'].has() ? pads['cond-p'].img() : '';
+
+  var btn = $id('btn-valider-p');
+  btn.disabled = true; btn.textContent = 'Génération PDF…';
+
+  var pdfData = {
+    immatriculation: immat, nom: nom, prenom: prenom,
+    dateControle: dateP, heureControle: heure,
+    carteGrise: carteGrise, assurance: assurance, detailAssurance: detailAssurance,
+    carteTotal: carteTotal, numCarteTotal: numCarteTotal,
+    permis: permis, detailPermis: detailPermis,
+    feuilleLocation: feuilleLocation, constats: constats,
+    sigResponsable: sigResp, sigConducteur: sigCond,
+  };
+  var pdfB64 = genererPDF('papier', pdfData);
+
+  btn.textContent = 'Envoi…';
+  try {
+    var r = await fetch('/api/controle-vehicule-v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'papier',
+        date: dateP, heureControle: heure,
+        immatriculation: immat, nom: nom, prenom: prenom,
+        carteGrise: carteGrise,
+        assurance: assurance, detailAssurance: detailAssurance,
+        carteTotal: carteTotal, numCarteTotal: numCarteTotal,
+        permis: permis, detailPermis: detailPermis,
+        feuilleLocation: feuilleLocation, constats: constats,
+        signatureResponsable: sigResp,
+        signatureConducteur:  sigCond,
+        pdf_base64: pdfB64,
+      }),
+    });
+    var j = await r.json().catch(function() { return {}; });
+    if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+    resetFormPapier();
+    showAccueil();
+    showAccueilMsg('ok', '✓ Fiche papier enregistrée — ' + immat);
+  } catch(e) {
+    showFormStatus('p', 'err', 'Erreur : ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Valider la fiche';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════ INIT ══ */
+$id('date-v').valueAsDate = new Date();
+$id('date-p').valueAsDate = new Date();
 </script>
 </body>
 </html>

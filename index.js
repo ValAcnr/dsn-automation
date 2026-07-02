@@ -10,8 +10,9 @@ const parserFacture = require('./modules/parser-facture');
 const parserMapping = require('./modules/parser-mapping');
 const logger        = require('./modules/logger');
 const calcul          = require('./modules/calcul-controles');
-const excelVehicules  = require('./modules/excel-vehicules');
-const gpsMatcher      = require('./modules/gps-matcher');
+const excelVehicules   = require('./modules/excel-vehicules');
+const excelVehiculesV2 = require('./modules/excel-vehicules-v2');
+const gpsMatcher       = require('./modules/gps-matcher');
 
 const PORT = process.env.PORT || 3000;
 
@@ -27,9 +28,10 @@ function parseNumSemaine(semaine) {
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/pdfs',                    express.static(path.join(__dirname, 'pdfs')));
-app.use('/pdfs/controle_vehicules', express.static(path.join(__dirname, 'pdfs', 'controle_vehicules')));
-app.use('/signatures',              express.static(path.join(__dirname, 'signatures')));
+app.use('/pdfs',                      express.static(path.join(__dirname, 'pdfs')));
+app.use('/pdfs/controle_vehicules',   express.static(path.join(__dirname, 'pdfs', 'controle_vehicules')));
+app.use('/signatures',                express.static(path.join(__dirname, 'signatures')));
+app.use('/photos/controle_vehicules', express.static(path.join(__dirname, 'photos', 'controle_vehicules')));
 
 // Allow fetch from file:// (Origin: null) and any local origin
 app.use((req, res, next) => {
@@ -288,6 +290,9 @@ app.delete('/api/feuille', async (req, res) => {
   }
 });
 
+// ── Contrôle véhicule v1 — DÉPRÉCIÉ (conservé pour lecture historique uniquement) ──
+// Le formulaire controle_vehicules.html n'alimente plus cette route.
+// Utiliser /api/controle-vehicule-v2 pour toute nouvelle fiche.
 app.post('/api/controle-vehicule', async (req, res) => {
   try {
     const lignes = Array.isArray(req.body) ? req.body : [];
@@ -384,6 +389,116 @@ app.delete('/api/controle-vehicule', async (req, res) => {
   }
 });
 
+// ── Contrôle véhicule v2 ─────────────────────────────────────────────────────
+const SIG_DIR_V2  = path.join(__dirname, 'signatures', 'controle_vehicules_v2');
+const VEHICULES_V2_XLSX = path.join(__dirname, 'controle_vehicules_v2.xlsx');
+
+app.post('/api/controle-vehicule-v2', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { type } = body;
+    if (!type || !['vehicule', 'papier'].includes(type)) {
+      return res.status(400).json({ error: 'type manquant (vehicule|papier)' });
+    }
+
+    const dateStr   = String(body.date || new Date().toISOString().slice(0, 10));
+    const safeImmat = String(body.immatriculation || 'INCONNUE').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    const safeDate  = dateStr.replace(/[^0-9]/g, '');
+    const uid       = `${safeImmat}_${safeDate}_${Date.now()}`;
+    const monthDir  = dateStr.slice(0, 7);
+
+    const photoDir = path.join(__dirname, 'photos', 'controle_vehicules', monthDir);
+    const pdfDir   = path.join(__dirname, 'pdfs',   'controle_vehicules', monthDir);
+    [SIG_DIR_V2, photoDir, pdfDir].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+
+    const saveSig = (b64field, fname) => {
+      if (!b64field) return '';
+      const b64 = String(b64field).replace(/^data:image\/[a-z]+;base64,/, '');
+      fs.writeFileSync(path.join(SIG_DIR_V2, fname), Buffer.from(b64, 'base64'));
+      return `/signatures/controle_vehicules_v2/${fname}`;
+    };
+
+    const savePhoto = (b64field, fname) => {
+      if (!b64field) return '';
+      const b64  = String(b64field).replace(/^data:image\/[a-z]+;base64,/, '');
+      const ext  = String(b64field).startsWith('data:image/png') ? '.png' : '.jpg';
+      const full = fname + ext;
+      fs.writeFileSync(path.join(photoDir, full), Buffer.from(b64, 'base64'));
+      return `/photos/controle_vehicules/${monthDir}/${full}`;
+    };
+
+    const sigResp  = saveSig(body.signatureResponsable, `${uid}_responsable.png`);
+    const sigCond  = saveSig(body.signatureConducteur,  `${uid}_conducteur.png`);
+    const photoInt = savePhoto(body.photoInterieurBase64, `${uid}_interieur`);
+    const photoExt = savePhoto(body.photoExterieurBase64, `${uid}_exterieur`);
+
+    let lienPdf = '';
+    if (body.pdf_base64) {
+      const heure    = String(body.heureControle || '').replace(/[^0-9h]/g, '') || 'xx';
+      const pdfFname = `${safeImmat}_${type}_${dateStr}_${heure}.pdf`;
+      const b64pdf   = String(body.pdf_base64).replace(/^data:application\/pdf;base64,/, '');
+      fs.writeFileSync(path.join(pdfDir, pdfFname), Buffer.from(b64pdf, 'base64'));
+      lienPdf = `/pdfs/controle_vehicules/${monthDir}/${pdfFname}`;
+    }
+
+    const row = {
+      date: dateStr, type,
+      immatriculation: body.immatriculation || '',
+      nom:    body.nom    || '',
+      prenom: body.prenom || '',
+    };
+
+    if (type === 'vehicule') {
+      row.sangle         = body.sangle       ? 'Oui' : 'Non';
+      row.roue_secours   = body.roueSecours  ? 'Oui' : 'Non';
+      row.etat_interieur = body.etatInterieur || '';
+      row.etat_exterieur = body.etatExterieur || '';
+      row.photo_interieur = photoInt;
+      row.photo_exterieur = photoExt;
+    } else {
+      row.carte_grise      = body.carteGrise      ? 'Oui' : 'Non';
+      row.assurance        = body.assurance        ? 'Oui' : 'Non';
+      row.detail_assurance = body.detailAssurance  || '';
+      row.carte_total      = body.carteTotal       ? 'Oui' : 'Non';
+      row.num_carte_total  = body.numCarteTotal    || '';
+      row.permis           = body.permis           ? 'Oui' : 'Non';
+      row.detail_permis    = body.detailPermis     || '';
+      row.feuille_location = body.feuilleLocation  ? 'Oui' : 'Non';
+      row.constats         = body.constats         ? 'Oui' : 'Non';
+    }
+
+    row.lien_pdf        = lienPdf;
+    row.sig_responsable = sigResp;
+    row.sig_conducteur  = sigCond;
+
+    await excelVehiculesV2.appendRow(row);
+    logger.ok(`Contrôle v2 [${type}] : ${body.immatriculation} / ${body.nom} ${body.prenom}`);
+    res.json({ status: 'ok' });
+  } catch (err) {
+    logger.err(`POST /api/controle-vehicule-v2 : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/controle-vehicule-v2/liste', (_req, res) => {
+  try {
+    res.json(excelVehiculesV2.getAll());
+  } catch (err) {
+    logger.err(`GET /api/controle-vehicule-v2/liste : ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/controle-vehicule-v2/export', (_req, res) => {
+  if (!fs.existsSync(VEHICULES_V2_XLSX)) {
+    return res.status(404).json({ error: 'Aucun contrôle v2 enregistré.' });
+  }
+  res.download(VEHICULES_V2_XLSX, 'controle_vehicules_v2.xlsx', err => {
+    if (err && !res.headersSent) logger.err(`Export v2 : ${err.message}`);
+  });
+});
+
+// ── Contrôle véhicule v1 export (historique) ─────────────────────────────────
 app.get('/api/controle-vehicule/export', (req, res) => {
   if (!fs.existsSync(VEHICULES_XLSX)) {
     return res.status(404).json({ error: 'Aucun contrôle véhicule enregistré pour le moment.' });

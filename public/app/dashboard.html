@@ -341,7 +341,7 @@
     <div class="toolbar">
       <div class="section-title">Contrôles véhicules</div>
       <div class="toolbar-right">
-        <a href="/api/controle-vehicule/export" class="btn btn-ghost">&#128202; Export XLSX</a>
+        <a href="/api/controle-vehicule-v2/export" class="btn btn-ghost">&#128202; Export XLSX</a>
       </div>
     </div>
     <div class="table-wrapper">
@@ -688,16 +688,29 @@ function renderFeuilles() {
   container.appendChild(tbl);
 }
 
-/* ── Contrôles véhicules ───────────────────────────── */
+/* ── Contrôles véhicules v2 ─────────────────────────── */
 async function loadVehicules() {
   try {
-    const r = await fetch('/api/controle-vehicule/liste');
+    const r = await fetch('/api/controle-vehicule-v2/liste');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     renderVehicules(await r.json());
   } catch (e) {
     document.getElementById('vehicules-container').innerHTML =
       `<div class="placeholder"><strong>Erreur</strong>${e.message}</div>`;
   }
+}
+
+function boolBadge(val) {
+  const ok = val === 'Oui';
+  return ok
+    ? '<span class="badge-sangle oui">Oui</span>'
+    : '<span class="badge-sangle non">Non</span>';
+}
+
+function photoThumb(src) {
+  if (!src) return '';
+  return `<a href="${esc(src)}" target="_blank"><img src="${esc(src)}" alt="photo"
+    style="width:38px;height:38px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:2px"></a>`;
 }
 
 function renderVehicules(rows) {
@@ -708,59 +721,47 @@ function renderVehicules(rows) {
   }
   const tbl = document.createElement('table');
   tbl.innerHTML = `<thead><tr>
-    <th>Immatriculation</th><th>Conducteur</th><th>Sangle</th><th>Date</th><th>Signatures</th><th>PDF</th><th></th>
+    <th>Type</th><th>Immatriculation</th><th>Nom / Prénom</th><th>Date</th>
+    <th>Checks</th><th>Photos</th><th>PDF</th>
   </tr></thead>`;
   const tbody = document.createElement('tbody');
   rows.forEach(r => {
-    const sangleBadge = r.sangle === 'Oui'
-      ? '<span class="badge-sangle oui">Oui</span>'
-      : '<span class="badge-sangle non">Non</span>';
-    const sigLink = (p, label) => {
-      if (!p) return '—';
-      const href = '/' + String(p).replace(/^\.\//, '');
-      return `<a href="${href}" target="_blank" title="${label}" style="font-size:18px;text-decoration:none;margin-right:4px">&#128196;</a>`;
-    };
-    const tr = document.createElement('tr');
-    tr.dataset.sigResp = r.sig_responsable || '';
-    tr.dataset.sigCond = r.sig_conducteur  || '';
-    tr.dataset.date    = r.date            || '';
-    tr.dataset.immat   = r.immatriculation || '';
-    tr.dataset.cond    = r.conducteur      || '';
-    const pdfHref = r.lien_pdf ? String(r.lien_pdf) : '';
-    const pdfLink = pdfHref
-      ? `<a href="${pdfHref}" target="_blank" class="btn btn-ghost" style="padding:6px 10px;font-size:12px">&#128196; PDF</a>`
-      : '—';
-    tr.innerHTML = `
-      <td class="name-cell">${esc(r.immatriculation || '')}</td>
-      <td>${esc(r.conducteur || '')}</td>
-      <td>${sangleBadge}</td>
-      <td>${esc(r.date || '')}</td>
-      <td style="white-space:nowrap">${sigLink(r.sig_responsable, 'Sig. responsable')}${sigLink(r.sig_conducteur, 'Sig. conducteur')}</td>
-      <td style="white-space:nowrap">${pdfLink}</td>
-      <td style="text-align:right"><button data-action="delete-veh" class="btn btn-danger" style="padding:6px 10px;font-size:14px" title="Supprimer ce contrôle">&#128465;</button></td>`;
-    tbody.appendChild(tr);
-  });
-  tbody.addEventListener('click', async e => {
-    const btn = e.target.closest('[data-action="delete-veh"]');
-    if (!btn) return;
-    const tr = btn.closest('tr');
-    const { sigResp, sigCond, date, immat, cond } = tr.dataset;
-    if (!confirm(`Supprimer le contrôle de ${immat} (${cond}) du ${date} ?\n\nLes signatures associées seront également supprimées.`)) return;
-    btn.disabled = true;
-    btn.innerHTML = '…';
-    try {
-      const r = await fetch('/api/controle-vehicule', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sig_responsable: sigResp, sig_conducteur: sigCond, date, immatriculation: immat, conducteur: cond })
-      });
-      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'HTTP ' + r.status); }
-      await loadVehicules();
-    } catch (err) {
-      alert('Erreur lors de la suppression : ' + err.message);
-      btn.disabled = false;
-      btn.innerHTML = '&#128465;';
+    const typeBadge = r.type === 'vehicule'
+      ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">🚐 Véhicule</span>'
+      : '<span style="background:#fef3c7;color:#b45309;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">📋 Papier</span>';
+
+    let checks = '';
+    if (r.type === 'vehicule') {
+      checks = `<div style="display:flex;flex-wrap:wrap;gap:3px">
+        <span style="font-size:10px;color:#6b7280">Sangle</span>${boolBadge(r.sangle)}
+        <span style="font-size:10px;color:#6b7280">Roue</span>${boolBadge(r.roue_secours)}
+      </div>`;
+    } else {
+      checks = `<div style="display:flex;flex-wrap:wrap;gap:3px;max-width:240px">
+        <span style="font-size:10px;color:#6b7280">CG</span>${boolBadge(r.carte_grise)}
+        <span style="font-size:10px;color:#6b7280">Ass.</span>${boolBadge(r.assurance)}
+        <span style="font-size:10px;color:#6b7280">Total</span>${boolBadge(r.carte_total)}
+        <span style="font-size:10px;color:#6b7280">Permis</span>${boolBadge(r.permis)}
+        <span style="font-size:10px;color:#6b7280">Loc.</span>${boolBadge(r.feuille_location)}
+        <span style="font-size:10px;color:#6b7280">Const.</span>${boolBadge(r.constats)}
+      </div>`;
     }
+
+    const photos = photoThumb(r.photo_interieur) + photoThumb(r.photo_exterieur);
+    const pdfLink = r.lien_pdf
+      ? `<a href="${esc(r.lien_pdf)}" target="_blank" class="btn btn-ghost" style="padding:5px 9px;font-size:12px">&#128196; PDF</a>`
+      : '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${typeBadge}</td>
+      <td class="name-cell">${esc(r.immatriculation||'')}</td>
+      <td>${esc(r.nom||'')} ${esc(r.prenom||'')}</td>
+      <td>${esc(r.date||'')}</td>
+      <td>${checks}</td>
+      <td>${photos||'—'}</td>
+      <td style="white-space:nowrap">${pdfLink}</td>`;
+    tbody.appendChild(tr);
   });
   tbl.appendChild(tbody);
   container.innerHTML = '';
