@@ -26,8 +26,9 @@ function parseNumSemaine(semaine) {
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/pdfs',       express.static(path.join(__dirname, 'pdfs')));
-app.use('/signatures', express.static(path.join(__dirname, 'signatures')));
+app.use('/pdfs',                    express.static(path.join(__dirname, 'pdfs')));
+app.use('/pdfs/controle_vehicules', express.static(path.join(__dirname, 'pdfs', 'controle_vehicules')));
+app.use('/signatures',              express.static(path.join(__dirname, 'signatures')));
 
 // Allow fetch from file:// (Origin: null) and any local origin
 app.use((req, res, next) => {
@@ -285,23 +286,44 @@ app.post('/api/controle-vehicule', async (req, res) => {
 
     for (let i = 0; i < lignes.length; i++) {
       const l         = lignes[i];
+      const dateStr   = String(l.date || new Date().toISOString().slice(0, 10));
       const safeImmat = String(l.immatriculation || 'INCONNUE').toUpperCase().replace(/[^A-Z0-9]/g, '_');
-      const safeDate  = String(l.date || new Date().toISOString().slice(0, 10)).replace(/[^0-9]/g, '');
+      const safeDate  = dateStr.replace(/[^0-9]/g, '');
       const uid       = `${safeImmat}_${safeDate}_${Date.now() + i}`;
 
       const sigResp = saveSig(l.signatureResponsable, `${uid}_responsable.png`);
       const sigCond = saveSig(l.signatureConducteur,  `${uid}_conducteur.png`);
 
+      // Sauvegarde PDF
+      let lienPdf = '';
+      if (l.pdf_base64) {
+        const heure    = String(l.heureControle || '').replace(/[^0-9h]/g, '') || 'xx';
+        const monthDir = dateStr.slice(0, 7);  // YYYY-MM
+        const pdfDir   = path.join(__dirname, 'pdfs', 'controle_vehicules', monthDir);
+        if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+        const pdfFname = `${safeImmat}_${dateStr}_${heure}.pdf`;
+        const b64pdf   = String(l.pdf_base64).replace(/^data:application\/pdf;base64,/, '');
+        fs.writeFileSync(path.join(pdfDir, pdfFname), Buffer.from(b64pdf, 'base64'));
+        lienPdf = `/pdfs/controle_vehicules/${monthDir}/${pdfFname}`;
+      }
+
       await excelVehicules.appendRow({
-        date:            l.date || new Date().toISOString().slice(0, 10),
-        immatriculation: l.immatriculation || '',
-        conducteur:      l.conducteur      || '',
+        date:            dateStr,
+        immatriculation: l.immatriculation  || '',
+        conducteur:      l.conducteur       || '',
         sangle:          l.sangle ? 'Oui' : 'Non',
+        mode:            l.mode             || 'rapide',
+        carte_total:     l.carteTotal    ? 'Oui' : 'Non',
+        num_carte_total: l.numCarteTotal    || '',
+        assurance:       l.assurance     ? 'Oui' : 'Non',
+        num_assurance:   l.numAssurance     || '',
+        depot:           l.depot            || '',
+        lien_pdf:        lienPdf,
         sig_responsable: sigResp,
         sig_conducteur:  sigCond,
       });
 
-      logger.ok(`Contrôle véhicule : ${l.immatriculation} / ${l.conducteur}`);
+      logger.ok(`Contrôle véhicule : ${l.immatriculation} / ${l.conducteur} [${l.mode || 'rapide'}]`);
     }
 
     res.json({ status: 'ok', count: lignes.length });
@@ -373,6 +395,15 @@ app.get('/api/gps-hours/:date', (req, res) => {
     res.json({ date, drivers: all[date] });
   } catch (e) {
     logger.err(`GET /api/gps-hours/${date} : ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/depots', (_req, res) => {
+  try {
+    const f = path.join(__dirname, 'config', 'depots.json');
+    res.json(fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : []);
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

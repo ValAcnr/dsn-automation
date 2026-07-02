@@ -11,6 +11,7 @@
       --blue:#2563eb;
       --green:#22c55e;
       --red:#ef4444;--red-bg:#fef2f2;
+      --amber:#d97706;--amber-bg:#fffbeb;
       --bg:#f0f4f8;--white:#fff;
       --border:#d1d5db;--border-light:#e5e7eb;
       --text:#1e293b;--text2:#374151;--text3:#6b7280;--text4:#9ca3af;
@@ -21,7 +22,6 @@
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
       background:var(--bg);color:var(--text);min-height:100vh}
 
-    /* ── Header ── */
     .hdr{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
       color:#fff;padding-top:env(safe-area-inset-top)}
     .hdr-inner{padding:14px 16px;display:flex;align-items:center;gap:12px}
@@ -30,11 +30,9 @@
     .hdr-title{font-size:17px;font-weight:700;line-height:1.2}
     .hdr-sub{font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 
-    /* ── Layout ── */
     .main{padding:16px;max-width:600px;margin:0 auto;
       padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 
-    /* ── Date bar ── */
     .date-bar{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);
       padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
     .date-bar label{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap}
@@ -43,28 +41,37 @@
       background:var(--bg);transition:border-color .15s}
     .date-bar input:focus{border-color:var(--blue);background:var(--white)}
 
-    /* ── Card ── */
     .vc-card{background:var(--white);border-radius:var(--r);
       box-shadow:var(--shadow-card);margin-bottom:14px;overflow:hidden}
     .vc-card-head{background:linear-gradient(135deg,var(--navy),var(--navy2));
       color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
     .vc-card-num{font-size:14px;font-weight:700;letter-spacing:.3px}
+    .head-right{display:flex;align-items:center;gap:8px}
+
+    /* Toggle mode */
+    .mode-btn{border:none;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .2s;
+      background:rgba(255,255,255,.18);color:#fff}
+    .mode-btn.complet{background:rgba(255,255,255,.9);color:var(--navy)}
+
     .btn-del{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;
       padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
       transition:background .15s}
     .btn-del:hover{background:rgba(239,68,68,.55)}
     .vc-card-body{padding:16px 16px 4px}
 
-    /* ── Fields ── */
     .field{margin-bottom:14px}
     .field-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
       letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
     .fi{width:100%;border:1px solid var(--border);border-radius:var(--rx);
       padding:11px 14px;font-size:16px;font-family:inherit;color:var(--text);
-      outline:none;background:var(--bg);transition:border-color .15s,-webkit-appearance 0s}
+      outline:none;background:var(--bg);transition:border-color .15s}
     .fi:focus{border-color:var(--blue);background:var(--white)}
+    select.fi{-webkit-appearance:none;appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
 
-    /* ── Toggle sangle ── */
+    /* Sangle toggle */
     .field-sangle{display:flex;align-items:center;gap:12px;padding:10px 0}
     .field-sangle .field-label{margin-bottom:0;flex:1}
     .sw{width:46px;height:27px;border-radius:14px;background:#D1D5DB;border:none;
@@ -78,13 +85,31 @@
     .sangle-val{font-size:14px;font-weight:700;color:var(--text3);min-width:30px}
     .sw.on ~ .sangle-val{color:var(--green)}
 
-    /* ── Signature pad (same component as feuille_heure_v4.html) ── */
+    /* Mode complet section */
+    .complet-section{margin-top:2px;padding-top:2px}
+    .complet-sep{display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:4px}
+    .complet-sep::before,.complet-sep::after{content:'';flex:1;height:1px;background:var(--border-light)}
+    .complet-sep span{font-size:10px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--text4);white-space:nowrap}
+
+    /* Checkbox field */
+    .field-check{display:flex;align-items:center;gap:10px;padding:8px 0;margin-bottom:0}
+    .field-check .field-label{margin-bottom:0;flex:1;text-transform:none;font-size:13px;
+      font-weight:600;color:var(--text2);letter-spacing:0}
+    .chk{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;
+      appearance:none;-webkit-appearance:none;background:var(--bg);flex-shrink:0;
+      cursor:pointer;transition:all .15s;position:relative}
+    .chk:checked{background:var(--blue);border-color:var(--blue)}
+    .chk:checked::after{content:'✓';position:absolute;top:50%;left:50%;
+      transform:translate(-50%,-50%);color:#fff;font-size:12px;font-weight:700;line-height:1}
+    .complet-sub{margin-top:4px;margin-left:30px}
+
+    /* Signature pad */
     .sig-lbl{font-size:11px;font-weight:700;text-transform:uppercase;
       letter-spacing:.06em;color:var(--text3);margin-bottom:5px}
     .sig-wrap{position:relative;background:var(--bg);border:2px dashed var(--border);
       border-radius:var(--rx);overflow:hidden;touch-action:none;margin-bottom:6px;
       transition:border-color .2s}
-    .sig-wrap:has(canvas:active){border-color:var(--blue)}
     .sig-wrap canvas{display:block;width:100%;height:100px}
     .sig-hint{position:absolute;inset:0;display:flex;flex-direction:column;
       align-items:center;justify-content:center;pointer-events:none;gap:4px}
@@ -96,7 +121,6 @@
       font-family:inherit;color:var(--text3);transition:all .15s}
     .sig-clear:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
 
-    /* ── Card footer ── */
     .vc-card-footer{border-top:1px solid var(--border-light);padding:10px 16px;
       display:flex;justify-content:flex-end}
     .btn-add-after{background:transparent;border:1px solid var(--border);color:var(--text3);
@@ -104,7 +128,6 @@
       cursor:pointer;font-family:inherit;transition:all .15s}
     .btn-add-after:hover{border-color:var(--blue);color:var(--blue)}
 
-    /* ── Global buttons ── */
     .btn-add-global{width:100%;background:var(--white);border:2px dashed var(--border);
       color:var(--text3);border-radius:var(--r);padding:14px 16px;font-size:15px;
       font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px;transition:all .15s}
@@ -117,7 +140,6 @@
     .btn-envoyer:hover{opacity:.88}
     .btn-envoyer:disabled{opacity:.5;cursor:not-allowed}
 
-    /* ── Status ── */
     .status{border-radius:var(--rx);padding:12px 14px;margin-bottom:14px;
       font-size:14px;font-weight:500;display:none;line-height:1.4}
     .status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
@@ -153,13 +175,169 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 'use strict';
 
 var pads     = {};
 var rowCount = 0;
+var depots   = [];
 
-/* ── Signature pad — même logique que feuille_heure_v4.html ── */
+/* ── Chargement dépôts ── */
+fetch('/api/depots').then(function(r) { return r.json(); }).then(function(list) {
+  depots = Array.isArray(list) ? list : [];
+}).catch(function() { depots = []; });
+
+/* ── Helpers ── */
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+/* ── Base64 (même implémentation que feuille_heure_v4.html) ── */
+function uint8ArrayToBase64(uint8) {
+  var B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  var len = uint8.length;
+  var out = new Array(Math.ceil(len / 3) * 4);
+  var i = 0, ri = 0;
+  while (i < len) {
+    var b0 = uint8[i++];
+    var hasB1 = i < len, b1 = hasB1 ? uint8[i++] : 0;
+    var hasB2 = i < len, b2 = hasB2 ? uint8[i++] : 0;
+    out[ri++] = B64[b0 >> 2];
+    out[ri++] = B64[((b0 & 3) << 4) | (b1 >> 4)];
+    out[ri++] = hasB1 ? B64[((b1 & 15) << 2) | (b2 >> 6)] : '=';
+    out[ri++] = hasB2 ? B64[b2 & 63] : '=';
+  }
+  return out.join('');
+}
+
+/* ── Génération PDF contrôle véhicule ── */
+function _buildPDFControle(doc, data) {
+  var W = 210, m = 16, y = 0;
+  var NAVY = [26, 47, 90], NAVY2 = [30, 58, 115];
+  var BLEU = [37, 99, 235], GRIS = [200, 200, 200], NOIR = [30, 30, 30];
+
+  // ── EN-TÊTE ──
+  doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+  doc.rect(0, 0, W, 32, 'F');
+  doc.setFillColor(BLEU[0], BLEU[1], BLEU[2]);
+  doc.rect(0, 30, W, 2, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+  doc.text('Contrôle Véhicule', m, 13);
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(200, 215, 240);
+  doc.text('DSN Transports · AEL Services', m, 21);
+
+  // Date et heure bien visibles en haut à droite
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(data.dateControle, W - m, 12, { align: 'right' });
+  doc.setFontSize(10);
+  doc.text(data.heureControle, W - m, 20, { align: 'right' });
+
+  y = 40;
+
+  // ── Badge mode ──
+  var modeTxt = data.mode === 'complet' ? 'Mode complet' : 'Mode rapide';
+  doc.setFillColor(data.mode === 'complet' ? BLEU[0] : 100, data.mode === 'complet' ? BLEU[1] : 116, data.mode === 'complet' ? BLEU[2] : 139);
+  doc.roundedRect(m, y - 5, 30, 7, 2, 2, 'F');
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+  doc.text(modeTxt, m + 15, y, { align: 'center' });
+  y += 7;
+
+  // ── Bloc infos véhicule ──
+  function row(label, val) {
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(BLEU[0], BLEU[1], BLEU[2]);
+    doc.text(label, m, y);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
+    doc.text(String(val || '—'), m + 52, y);
+    y += 7;
+  }
+
+  row('Immatriculation :', data.immatriculation);
+  row('Conducteur :', data.conducteur);
+  y += 2;
+
+  // ── Séparateur ──
+  doc.setDrawColor(GRIS[0], GRIS[1], GRIS[2]); doc.setLineWidth(0.3);
+  doc.line(m, y, W - m, y); y += 7;
+
+  // ── Checks ──
+  function check(label, val) {
+    var ok = val === true || val === 'Oui' || val === 'oui';
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.setFillColor(ok ? 34 : 239, ok ? 197 : 68, ok ? 94 : 68);
+    doc.circle(m + 2, y - 1.5, 2.2, 'F');
+    doc.setTextColor(BLEU[0], BLEU[1], BLEU[2]);
+    doc.text(label, m + 7, y);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
+    doc.text(ok ? 'Oui' : 'Non', m + 52, y);
+    y += 7;
+  }
+
+  check('Sangle :', data.sangle);
+
+  if (data.mode === 'complet') {
+    check('Carte Total :', data.carteTotal);
+    if (data.carteTotal && data.numCarteTotal) {
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
+      doc.text('N° carte Total : ' + data.numCarteTotal, m + 7, y); y += 6;
+    }
+    check('Assurance :', data.assurance);
+    if (data.assurance && data.numAssurance) {
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(NOIR[0], NOIR[1], NOIR[2]);
+      doc.text('Réf. assurance : ' + data.numAssurance, m + 7, y); y += 6;
+    }
+    row('Dépôt :', data.depot);
+  }
+
+  y += 3;
+  doc.setDrawColor(GRIS[0], GRIS[1], GRIS[2]); doc.setLineWidth(0.3);
+  doc.line(m, y, W - m, y); y += 10;
+
+  // ── Signatures côte à côte ──
+  var sigW = (W - 2 * m - 10) / 2;
+  var sigH = 32;
+
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(BLEU[0], BLEU[1], BLEU[2]);
+  doc.text('Signature responsable', m, y);
+  doc.text('Signature conducteur', m + sigW + 10, y);
+  y += 4;
+
+  doc.setDrawColor(GRIS[0], GRIS[1], GRIS[2]); doc.setFillColor(248, 250, 252);
+  doc.roundedRect(m, y, sigW, sigH, 2, 2, 'FD');
+  doc.roundedRect(m + sigW + 10, y, sigW, sigH, 2, 2, 'FD');
+
+  if (data.sigResponsable) {
+    try { doc.addImage(data.sigResponsable, 'PNG', m + 1, y + 1, sigW - 2, sigH - 2); } catch(e) {}
+  }
+  if (data.sigConducteur) {
+    try { doc.addImage(data.sigConducteur, 'PNG', m + sigW + 11, y + 1, sigW - 2, sigH - 2); } catch(e) {}
+  }
+  y += sigH + 10;
+
+  // ── Pied de page ──
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 180, 180);
+  var genDate = new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  doc.text('Document généré le ' + genDate + ' — DSN Transports', m, y);
+}
+
+function genererPDFControle(data) {
+  if (!window.jspdf) return '';
+  try {
+    var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    _buildPDFControle(doc, data);
+    var ab = doc.output('arraybuffer');
+    if (!ab || ab.byteLength === 0) return '';
+    return uint8ArrayToBase64(new Uint8Array(ab));
+  } catch(e) {
+    console.error('[CV] PDF erreur :', e);
+    return '';
+  }
+}
+
+/* ── Signature pad ── */
 function initPad(id) {
   var canvas = document.getElementById('sig-' + id);
   var wrap   = document.getElementById('sig-wrap-' + id);
@@ -194,18 +372,14 @@ function initPad(id) {
   canvas.addEventListener('touchmove',  move,  { passive: false });
   canvas.addEventListener('touchend',   stop,  { passive: false });
   pads[id] = {
-    has: function () { return hasSig; },
-    clear: function () {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      hasSig = false;
-      if (hint) hint.style.opacity = '1';
-    },
-    img: function () {
-      var tmp  = document.createElement('canvas');
+    has: function() { return hasSig; },
+    clear: function() { ctx.clearRect(0, 0, canvas.width, canvas.height); hasSig = false; if (hint) hint.style.opacity = '1'; },
+    img: function() {
+      var tmp = document.createElement('canvas');
       tmp.width = canvas.width; tmp.height = canvas.height;
-      var ctx2 = tmp.getContext('2d');
-      ctx2.fillStyle = '#ffffff'; ctx2.fillRect(0, 0, tmp.width, tmp.height);
-      ctx2.drawImage(canvas, 0, 0);
+      var c2 = tmp.getContext('2d');
+      c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, tmp.width, tmp.height);
+      c2.drawImage(canvas, 0, 0);
       return tmp.toDataURL('image/png');
     }
   };
@@ -220,9 +394,27 @@ function toggleSangle(btn) {
   btn.nextElementSibling.textContent = on ? 'Non' : 'Oui';
 }
 
+/* ── Toggle mode rapide/complet ── */
+function toggleMode(btn) {
+  var isComplet = btn.classList.toggle('complet');
+  btn.textContent = isComplet ? '✔ Complet' : '⚡ Rapide';
+  var card = btn.closest('.vc-card');
+  card.querySelector('.complet-section').hidden = !isComplet;
+}
+
+/* ── Toggle sous-champ conditionnel (numéro carte / assurance) ── */
+function toggleSubField(chk, subId) {
+  var sub = document.getElementById(subId);
+  if (sub) sub.hidden = !chk.checked;
+  if (!chk.checked && sub) {
+    var inp = sub.querySelector('input');
+    if (inp) inp.value = '';
+  }
+}
+
 /* ── Numérotation visuelle ── */
 function renumberCards() {
-  document.querySelectorAll('.vc-card .vc-card-num').forEach(function (el, i) {
+  document.querySelectorAll('.vc-card .vc-card-num').forEach(function(el, i) {
     el.textContent = 'Véhicule ' + (i + 1);
   });
 }
@@ -233,10 +425,14 @@ function addLigne(doScroll) {
   var div = document.createElement('div');
   div.className = 'vc-card';
   div.id = 'vc-card-' + idx;
+
   div.innerHTML =
     '<div class="vc-card-head">' +
       '<span class="vc-card-num">Véhicule 1</span>' +
-      '<button class="btn-del" type="button" onclick="removeLigne(this)">✕ Supprimer</button>' +
+      '<div class="head-right">' +
+        '<button class="mode-btn" type="button" onclick="toggleMode(this)">⚡ Rapide</button>' +
+        '<button class="btn-del" type="button" onclick="removeLigne(this)">✕</button>' +
+      '</div>' +
     '</div>' +
     '<div class="vc-card-body">' +
       '<div class="field">' +
@@ -252,6 +448,42 @@ function addLigne(doScroll) {
         '<button class="sw" type="button" onclick="toggleSangle(this)"></button>' +
         '<span class="sangle-val">Non</span>' +
       '</div>' +
+
+      // ── Section mode complet (masquée par défaut) ──
+      '<div class="complet-section" id="complet-' + idx + '" hidden>' +
+        '<div class="complet-sep"><span>Champs complémentaires</span></div>' +
+
+        // Carte Total
+        '<div class="field field-check">' +
+          '<input class="chk" type="checkbox" id="carte-chk-' + idx + '" ' +
+            'onchange="toggleSubField(this, \'num-carte-' + idx + '\')">' +
+          '<label class="field-label" for="carte-chk-' + idx + '">Carte Total présente</label>' +
+        '</div>' +
+        '<div class="field complet-sub" id="num-carte-' + idx + '" hidden>' +
+          '<label class="field-label">Numéro de carte Total</label>' +
+          '<input class="fi" type="text" data-field="num-carte-total" placeholder="Numéro de carte">' +
+        '</div>' +
+
+        // Assurance
+        '<div class="field field-check">' +
+          '<input class="chk" type="checkbox" id="assurance-chk-' + idx + '" ' +
+            'onchange="toggleSubField(this, \'num-assurance-' + idx + '\')">' +
+          '<label class="field-label" for="assurance-chk-' + idx + '">Assurance présente</label>' +
+        '</div>' +
+        '<div class="field complet-sub" id="num-assurance-' + idx + '" hidden>' +
+          '<label class="field-label">Numéro / référence assurance</label>' +
+          '<input class="fi" type="text" data-field="num-assurance" placeholder="Référence assurance">' +
+        '</div>' +
+
+        // Dépôt
+        '<div class="field">' +
+          '<label class="field-label">Dépôt de rattachement</label>' +
+          '<select class="fi" data-field="depot" id="depot-' + idx + '">' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+
+      // ── Signatures ──
       '<div class="field">' +
         '<div class="sig-lbl">Signature responsable</div>' +
         '<div class="sig-wrap" id="sig-wrap-resp-' + idx + '">' +
@@ -278,8 +510,20 @@ function addLigne(doScroll) {
     '<div class="vc-card-footer">' +
       '<button class="btn-add-after" type="button" onclick="addLigne(true)">+ Ajouter un contrôle</button>' +
     '</div>';
+
   document.getElementById('vc-list').appendChild(div);
   renumberCards();
+
+  // Peupler le select dépôt
+  var sel = document.getElementById('depot-' + idx);
+  if (sel) {
+    (depots.length ? depots : ['Non renseigné']).forEach(function(d) {
+      var opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      sel.appendChild(opt);
+    });
+  }
+
   initPad('resp-' + idx);
   initPad('cond-' + idx);
   if (doScroll) div.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -307,40 +551,92 @@ function showStatus(type, msg) {
 async function envoyerTout() {
   var cards  = document.querySelectorAll('.vc-card');
   var date   = document.getElementById('date-controle').value;
-  var lignes = [];
-  var errCard = null;
+  var now    = new Date();
+  var heureControle = pad2(now.getHours()) + 'h' + pad2(now.getMinutes());
 
-  cards.forEach(function (card) {
+  var lignes  = [];
+  var errCard = null;
+  var errMsg  = '';
+
+  cards.forEach(function(card) {
     if (errCard) return;
     var idx    = card.id.replace('vc-card-', '');
     var immat  = card.querySelector('[data-field="immatriculation"]').value.trim().toUpperCase();
     var cond   = card.querySelector('[data-field="conducteur"]').value.trim();
-    if (!immat || !cond) { errCard = card; return; }
-    var sangle = card.querySelector('.sw').classList.contains('on');
-    var rPad   = pads['resp-' + idx];
-    var cPad   = pads['cond-' + idx];
+    if (!immat || !cond) { errCard = card; errMsg = 'Remplissez l\'immatriculation et le nom du conducteur pour chaque véhicule.'; return; }
+
+    var isComplet   = card.querySelector('.mode-btn').classList.contains('complet');
+    var mode        = isComplet ? 'complet' : 'rapide';
+    var sangle      = card.querySelector('.sw').classList.contains('on');
+
+    var carteTotal    = isComplet && document.getElementById('carte-chk-' + idx).checked;
+    var numCarteTotal = carteTotal ? (card.querySelector('[data-field="num-carte-total"]').value.trim()) : '';
+    var assurance     = isComplet && document.getElementById('assurance-chk-' + idx).checked;
+    var numAssurance  = assurance ? (card.querySelector('[data-field="num-assurance"]').value.trim()) : '';
+    var depot         = isComplet ? (document.getElementById('depot-' + idx).value) : '';
+
+    if (carteTotal && !numCarteTotal) { errCard = card; errMsg = 'Numéro de carte Total obligatoire (Carte Total cochée).'; return; }
+    if (assurance  && !numAssurance)  { errCard = card; errMsg = 'Numéro / référence assurance obligatoire (Assurance cochée).'; return; }
+
+    var rPad = pads['resp-' + idx];
+    var cPad = pads['cond-' + idx];
+
     lignes.push({
-      immatriculation:      immat,
-      conducteur:           cond,
-      sangle:               sangle,
+      immatriculation:     immat,
+      conducteur:          cond,
+      date:                date,
+      heureControle:       heureControle,
+      mode:                mode,
+      sangle:              sangle,
+      carteTotal:          carteTotal,
+      numCarteTotal:       numCarteTotal,
+      assurance:           assurance,
+      numAssurance:        numAssurance,
+      depot:               depot,
       signatureResponsable: rPad && rPad.has() ? rPad.img() : '',
       signatureConducteur:  cPad && cPad.has() ? cPad.img() : '',
-      date:                 date
+      // champs pour le PDF (y compris signatures déjà extraites)
+      _sigResp: rPad && rPad.has() ? rPad.img() : '',
+      _sigCond: cPad && cPad.has() ? cPad.img() : '',
     });
   });
 
   if (errCard) {
     errCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showStatus('err', 'Remplissez l\'immatriculation et le nom du conducteur pour chaque véhicule.');
+    showStatus('err', errMsg);
     return;
   }
-  if (!lignes.length) {
-    showStatus('err', 'Ajoutez au moins un véhicule.');
-    return;
-  }
+  if (!lignes.length) { showStatus('err', 'Ajoutez au moins un véhicule.'); return; }
 
   var btn = document.getElementById('btn-envoyer');
   btn.disabled = true;
+  btn.textContent = 'Génération PDF…';
+
+  // Générer un PDF par ligne
+  var dateLabel = date || now.toISOString().slice(0, 10);
+  for (var i = 0; i < lignes.length; i++) {
+    var l = lignes[i];
+    var pdfData = {
+      immatriculation: l.immatriculation,
+      conducteur:      l.conducteur,
+      dateControle:    dateLabel,
+      heureControle:   l.heureControle,
+      mode:            l.mode,
+      sangle:          l.sangle,
+      carteTotal:      l.carteTotal,
+      numCarteTotal:   l.numCarteTotal,
+      assurance:       l.assurance,
+      numAssurance:    l.numAssurance,
+      depot:           l.depot,
+      sigResponsable:  l._sigResp,
+      sigConducteur:   l._sigCond,
+    };
+    var b64 = genererPDFControle(pdfData);
+    if (b64) l.pdf_base64 = b64;
+    delete l._sigResp;
+    delete l._sigCond;
+  }
+
   btn.textContent = 'Envoi en cours…';
 
   try {
@@ -349,15 +645,14 @@ async function envoyerTout() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(lignes)
     });
-    var j = await r.json().catch(function () { return {}; });
+    var j = await r.json().catch(function() { return {}; });
     if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
     showStatus('ok', (j.count || lignes.length) + ' contrôle(s) enregistré(s) avec succès.');
-    // Réinitialisation
     document.getElementById('vc-list').innerHTML = '';
-    Object.keys(pads).forEach(function (k) { delete pads[k]; });
+    Object.keys(pads).forEach(function(k) { delete pads[k]; });
     rowCount = 0;
     addLigne();
-  } catch (e) {
+  } catch(e) {
     showStatus('err', 'Erreur lors de l\'envoi : ' + e.message);
   } finally {
     btn.disabled = false;

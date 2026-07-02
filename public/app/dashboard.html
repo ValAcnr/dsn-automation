@@ -706,7 +706,7 @@ function renderVehicules(rows) {
   }
   const tbl = document.createElement('table');
   tbl.innerHTML = `<thead><tr>
-    <th>Immatriculation</th><th>Conducteur</th><th>Sangle</th><th>Date</th><th>Signatures</th><th></th>
+    <th>Immatriculation</th><th>Conducteur</th><th>Sangle</th><th>Date</th><th>Signatures</th><th>PDF</th><th></th>
   </tr></thead>`;
   const tbody = document.createElement('tbody');
   rows.forEach(r => {
@@ -724,12 +724,17 @@ function renderVehicules(rows) {
     tr.dataset.date    = r.date            || '';
     tr.dataset.immat   = r.immatriculation || '';
     tr.dataset.cond    = r.conducteur      || '';
+    const pdfHref = r.lien_pdf ? String(r.lien_pdf) : '';
+    const pdfLink = pdfHref
+      ? `<a href="${pdfHref}" target="_blank" class="btn btn-ghost" style="padding:6px 10px;font-size:12px">&#128196; PDF</a>`
+      : '—';
     tr.innerHTML = `
       <td class="name-cell">${esc(r.immatriculation || '')}</td>
       <td>${esc(r.conducteur || '')}</td>
       <td>${sangleBadge}</td>
       <td>${esc(r.date || '')}</td>
       <td style="white-space:nowrap">${sigLink(r.sig_responsable, 'Sig. responsable')}${sigLink(r.sig_conducteur, 'Sig. conducteur')}</td>
+      <td style="white-space:nowrap">${pdfLink}</td>
       <td style="text-align:right"><button data-action="delete-veh" class="btn btn-danger" style="padding:6px 10px;font-size:14px" title="Supprimer ce contrôle">&#128465;</button></td>`;
     tbody.appendChild(tr);
   });
