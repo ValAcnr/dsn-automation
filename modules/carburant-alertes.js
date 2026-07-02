@@ -173,17 +173,25 @@ async function analyserTransactions(transactions, opts = {}) {
     }
 
     // ── Règle C : Prix au litre anormal ───────────────────────────────────
-    if (t.montant_ht !== null && t.litres > 0) {
-      const prixLitre    = t.montant_ht / t.litres;
-      const produitKey   = normProduit(t.produit);
-      const prixRefLitre = prixRef[produitKey] || prixRef.defaut || 1.75;
-      if (prixLitre > prixRefLitre * (1 + SEUIL_PRIX)) {
-        alertes.push({
-          code: 'PRIX_ANORMAL',
-          label: 'Prix anormal',
-          detail: `${prixLitre.toFixed(3)} €/L vs référence ${prixRefLitre} €/L (${produitKey})`,
-          prix_litre: Math.round(prixLitre * 1000) / 1000,
-        });
+    // Utilise prix_unitaire du fichier Total s'il est dispo, sinon calcul montant_ht/litres
+    if (t.litres > 0) {
+      let prixLitre = null;
+      if (t.prix_unitaire != null) {
+        prixLitre = t.prix_unitaire;
+      } else if (t.montant_ht != null) {
+        prixLitre = t.montant_ht / t.litres;
+      }
+      if (prixLitre !== null) {
+        const produitKey   = normProduit(t.produit);
+        const prixRefLitre = prixRef[produitKey] || prixRef.defaut || 1.75;
+        if (prixLitre > prixRefLitre * (1 + SEUIL_PRIX)) {
+          alertes.push({
+            code: 'PRIX_ANORMAL',
+            label: 'Prix anormal',
+            detail: `${prixLitre.toFixed(3)} €/L vs référence ${prixRefLitre} €/L (${produitKey})`,
+            prix_litre: Math.round(prixLitre * 1000) / 1000,
+          });
+        }
       }
     }
 
