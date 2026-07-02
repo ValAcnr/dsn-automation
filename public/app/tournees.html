@@ -112,9 +112,11 @@
         <option value="">Toutes les zones</option>
       </select>
       <button class="btn btn-ghost" onclick="load()">&#8635; Actualiser</button>
-      <button class="btn btn-primary" id="btn-export" onclick="downloadExport()">&#128202; Télécharger ZIP (toutes zones)</button>
+      <a href="/api/tournees/master" class="btn btn-primary">&#128202; Télécharger fichier maître</a>
     </div>
   </div>
+
+  <div id="master-info" style="font-size:12px;color:var(--gray-600);margin-bottom:10px;min-height:18px"></div>
 
   <div class="table-wrapper">
     <div id="container" class="placeholder">Chargement…</div>
@@ -151,20 +153,22 @@ function populateZoneFilter() {
       .join('');
 }
 
-function updateExportBtn() {
-  const zone = document.getElementById('filter-zone').value;
-  const btn  = document.getElementById('btn-export');
-  btn.textContent = zone
-    ? '\u{1F4CA} Télécharger Excel (zone)'
-    : '\u{1F4CA} Télécharger ZIP (toutes zones)';
-}
-
-function downloadExport() {
-  const zone = document.getElementById('filter-zone').value;
-  const url  = zone
-    ? `/api/tournees/export?zone=${encodeURIComponent(zone)}`
-    : '/api/tournees/export';
-  window.location.href = url;
+async function loadMasterInfo() {
+  const el = document.getElementById('master-info');
+  try {
+    const r = await fetch('/api/tournees/master/info');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const info = await r.json();
+    if (info.exists && info.mtime) {
+      el.textContent = 'Fichier maître — dernière mise à jour : ' + info.mtime;
+    } else {
+      el.textContent = 'Fichier maître : non disponible sur le serveur.';
+      el.style.color = 'var(--gray-400)';
+    }
+  } catch (e) {
+    el.textContent = 'Fichier maître : impossible de récupérer les informations.';
+    el.style.color = 'var(--gray-400)';
+  }
 }
 
 function render() {
@@ -233,9 +237,10 @@ async function load() {
 }
 
 document.getElementById('filter-date').addEventListener('change', render);
-document.getElementById('filter-zone').addEventListener('change', () => { render(); updateExportBtn(); });
+document.getElementById('filter-zone').addEventListener('change', render);
 
 load();
+loadMasterInfo();
 </script>
 </body>
 </html>
