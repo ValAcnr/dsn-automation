@@ -934,7 +934,10 @@ function envoyerEnSplit(splitParts, basePayload, jours, sem, semStr, annee, now)
   function envoyerProchainePart() {
     if (partIdx >= splitParts.length) {
       st.className = 'send-ok';
-      st.textContent = '✓ Fiches envoyées (' + splitParts.map(function(p) { return 'mois ' + p.mois; }).join(' + ') + ')';
+      var moisLabel = splitParts.map(function(p) { return 'mois ' + p.mois; }).join(' + ');
+      st.textContent = splitParts.length === 1
+        ? '✓ Fiche envoyée (' + moisLabel + ')'
+        : '✓ Fiches envoyées (' + moisLabel + ')';
       try { localStorage.removeItem(getCleStorage()); } catch(e) {}
       return;
     }
@@ -1130,9 +1133,17 @@ function envoyerSemaine() {
 
   var annee = now.getFullYear();
   var splitParts = detecterSplit(sem, annee);
+  if (splitParts) {
+    // Ne conserver que les parties ayant au moins un jour réellement travaillé
+    splitParts = splitParts.filter(function(part) {
+      return part.indices.some(function(i) { return jours[i] && jours[i].travaille === 'Oui'; });
+    });
+    if (splitParts.length === 0) splitParts = null;
+  }
   if (!splitParts) {
     genererPDFBase64(payload, doEnvoi);
   } else {
+    // 1 partie → PDF unique avec le bon mois de paie ; 2 parties → split normal
     envoyerEnSplit(splitParts, payload, jours, sem, semStr, annee, now);
   }
 }
