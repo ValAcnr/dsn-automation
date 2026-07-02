@@ -9,6 +9,7 @@
   const NAV = [
     { href: '/app/dashboard.html', label: 'Dashboard intérimaires', icon: '&#9783;' },
     { href: '/app/conges.html',    label: 'Congés',                  icon: '&#9788;' },
+    { href: '/app/tournees.html',  label: 'Tournées',                icon: '&#128203;' },
   ];
 
   const cur = window.location.pathname;

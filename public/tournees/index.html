@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSN — Saisie tournées</title>
+<style>
+  :root { --bleu:#1a3a6b; --bleu2:#2456a0; --ok:#1e8a4c; --err:#c0392b; --gris:#f4f6f9; }
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',Arial,sans-serif; }
+  body { background:var(--gris); color:#222; padding-bottom:90px; }
+  header { background:var(--bleu); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10; }
+  header h1 { font-size:1.1rem; font-weight:600; }
+  header .site { font-size:1.35rem; font-weight:700; margin-top:2px; }
+  .wrap { max-width:760px; margin:0 auto; padding:14px; }
+  .card { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:14px; margin-bottom:14px; }
+  label { font-size:.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em; }
+  select, input, textarea { width:100%; padding:10px; border:1px solid #ccd3dd; border-radius:8px; font-size:1rem; background:#fff; }
+  select:focus, input:focus, textarea:focus { outline:2px solid var(--bleu2); border-color:transparent; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .site-title { color:var(--bleu); font-size:1.15rem; margin:18px 0 10px; padding-bottom:6px; border-bottom:2px solid var(--bleu); }
+  .tournee { border:1px solid #e2e7ef; border-radius:10px; padding:12px; margin-bottom:12px; background:#fbfcfe; }
+  .tournee.filled { border-color:var(--ok); background:#f2faf5; }
+  .tournee h3 { color:var(--bleu); font-size:1.05rem; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .tournee h3 .check { color:var(--ok); display:none; }
+  .tournee.filled h3 .check { display:inline; }
+  .tournee .field { margin-bottom:8px; }
+  .bar { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #dde3ec; padding:12px 16px; display:flex; gap:10px; align-items:center; justify-content:center; }
+  button { background:var(--bleu); color:#fff; border:none; border-radius:8px; padding:13px 22px; font-size:1.05rem; font-weight:600; cursor:pointer; width:100%; max-width:420px; }
+  button:disabled { background:#9aa7bb; cursor:not-allowed; }
+  .msg { text-align:center; padding:10px; border-radius:8px; margin-bottom:12px; font-weight:600; display:none; }
+  .msg.ok { display:block; background:#e6f6ec; color:var(--ok); }
+  .msg.err { display:block; background:#fbeaea; color:var(--err); }
+  .hint { font-size:.85rem; color:#777; margin-top:4px; }
+  .badge { background:#eef2f9; color:var(--bleu); font-size:.78rem; padding:3px 8px; border-radius:20px; font-weight:600; }
+  #loading { text-align:center; padding:50px 20px; color:#666; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Saisie des tournées journalières</h1>
+  <div class="site" id="siteName">Chargement…</div>
+</header>
+
+<div class="wrap">
+  <div id="loading">Chargement de la configuration…</div>
+
+  <div id="app" style="display:none">
+    <div class="card">
+      <div class="row2">
+        <div>
+          <label for="dateSel">Date</label>
+          <select id="dateSel"></select>
+        </div>
+        <div>
+          <label for="respName">Votre nom</label>
+          <input id="respName" placeholder="Responsable de site" autocomplete="name">
+        </div>
+      </div>
+      <p class="hint">Remplissez le chauffeur et le véhicule pour chaque tournée du jour, puis envoyez. Les tournées non concernées peuvent rester vides.</p>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <div id="tournees"></div>
+  </div>
+</div>
+
+<div class="bar">
+  <button id="btnSend" disabled>Envoyer la journée</button>
+</div>
+
+<datalist id="dlChauffeurs"></datalist>
+<datalist id="dlVehicules"></datalist>
+
+<script>
+// ================== CONFIGURATION ==================
+const WEBHOOK_URL = "/api/tournees";
+const CONFIG_URL  = "sites_config.json";
+// ===================================================
+
+const CFG_EMBEDDED = /*CONFIG_START*/{"zones": {"bead": {"source_file": "BEAD.xlsx", "sites": [{"name": "BEAD", "master_client": "BEAD", "tournees": ["T01-T03", "T02", "T04"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "BEAD"}, "choisy_fordvitry_dafmassy_daflouvres": {"source_file": "CHOISY_FORDVITRY_DAFMASSY_DAFLOUVRES.xlsx", "sites": [{"name": "CHOISY PIÈCES AUTO", "master_client": "CPA 94", "tournees": ["T01", "T03", "T04", "T06", "POP'S midi", "POP'S soir", "T0", "T05", "T02", "NAV matin"]}, {"name": "FORD VITRY", "master_client": "FORD 94", "tournees": ["T01"]}, {"name": "DAF MASSY", "master_client": "DAF 91", "tournees": ["T01 (badge)", "T02"]}, {"name": "DAF LOUVRES", "master_client": "DAF 95", "tournees": ["T01"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "CHOISY PIÈCES AUTO / FORD VITRY / DAF MASSY / DAF LOUVRES"}, "coignieres_pieces_auto": {"source_file": "COIGNIERES_PIECES_AUTO.xlsx", "sites": [{"name": "COIGNIÈRES PIÈCES AUTO", "master_client": "CPA 78", "tournees": ["T02", "T03", "T04", "T05", "T06", "T01", "T08"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "COIGNIÈRES PIÈCES AUTO"}, "idlp_fresnes": {"source_file": "IDLP_FRESNES.xlsx", "sites": [{"name": "IDLP FRESNES", "master_client": "IDLP 94", "tournees": ["T04", "T05", "T05 Bis", "T07", "T09", "T10", "T11", "T13", "NAV-MA 94-78", "NAV-AP 94-78", "NAV-01 94-92", "NAV-02 94-92", "NAV Copoletti", "T15", "NAV-EVREUX", "T01", "T08", "T06"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "IDLP FRESNES"}, "idlp_grigny": {"source_file": "IDLP_GRIGNY.xlsx", "sites": [{"name": "IDLP GRIGNY", "master_client": "IDLP 91", "tournees": ["T42", "T43", "T44", "T45", "T41"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "IDLP GRIGNY"}, "idlp_orgeval_apac_cdpa": {"source_file": "IDLP_ORGEVAL_APAC_CDPA_.xlsx", "sites": [{"name": "IDLP ORGEVAL", "master_client": "IDLP 78", "tournees": ["T33", "T34", "T35", "T35 bis", "T36", "T37", "T31", "T32", "T38", "T33-35-36 a-m", "T33 bis"]}, {"name": "APAC", "master_client": "APAC 78", "tournees": ["T01"]}, {"name": "CDPA", "master_client": "CDPA 78", "tournees": ["T01"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "IDLP ORGEVAL / APAC / CDPA"}, "ned_92_95": {"source_file": "NED_92_95.xlsx", "sites": [{"name": "NED 92", "master_client": "NED 92", "tournees": ["HA", "HB", "HC", "HD", "HE", "HF", "HG", "HH", "NAV-92 (ramasse)", "NAV 92-95"]}, {"name": "NED 95", "master_client": "NED 95", "tournees": ["VA", "VB", "VC"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "NED 92 / NED 95"}, "ouest_injection": {"source_file": "OUEST_INJECTION.xlsx", "sites": [{"name": "OUEST INJECTION", "master_client": "OUEST", "tournees": ["T02", "T03", "T04", "T05", "T06", "NAV", "T07", "T08", "T08 BIS", "T09", "T10", "T11", "NAV PAP", "T13", "T14", "T15"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "OUEST INJECTION"}, "pap_92": {"source_file": "PAP_92.xlsx", "sites": [{"name": "PAP 92", "master_client": "PAP 92", "tournees": ["T80", "T81", "T82", "T77-51", "T10", "T45", "T60", "T89", "T45-91", "T83"]}], "dates": ["2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-15", "2026-07-16", "2026-07-17"], "name": "PAP 92"}}, "chauffeurs": ["ABAILLE Quentin", "ABRAHAM Yann", "ALBERICI Jérémy", "ALEXANDRE David", "ALMEIDA FERNANDES Adrien", "ALVES RODRIGUES Rui", "ASSANI Djoumbefoumou", "AURIEL Vincent", "AZEDDOU Hicham", "BABACI Joachim", "BALY Luis", "BARON Cyril", "BATTEUX Antoine", "BATTEUX Nicolas", "BAZANTE Corentin", "BELTAI Steevyn", "BEN DAHMAN Karim", "BERTE Grégory", "BIENFAIT Nathan", "BOUKHIAR Djilali", "BOURDIN Mickaël", "BOUZON Jacques", "BRIAND Matéo", "BUCKTOWSING Calvin", "CHADET Christopher", "CHIBIKH Sofiane", "CIMEUS Jimmy", "COUTO PEREIRA Luis", "DA SILVA Bruno", "DE BOISROLIN Mathis", "DE SOUSA Diego", "DELAG Sébastien", "DELAPORTE Anthony", "DIBOULA Stanley", "DO ROSARIO Joao", "DOUCHEMENT Thomas", "DURET Florian", "FRANCIS Charles", "GIMENEZ-PONS Jordan", "GOMIS François", "GONCALVES Jessy en form avec OSIAS K", "GOYETE Curtis", "GRIVALLIERS Cédric", "GUALANDRIS Jérôme", "GUILLAUME Nixon", "HAKOULA Julien", "HEGO Mathieu", "HERY Ludwig", "HUVELIN Christopher", "IDOUKDIM Lahoucine", "JASAWANT Johan", "JELINEK Aldwin", "JOBART Ethan", "KANTE Samba", "KODJO Biletchi Samuel", "KOUDJOUNOU Komlan (AEL)", "LAMBERT Nicolas", "LATRAYE Julien", "LE GRILLE Benjamin", "LIMA MANHOSO ROMEU", "LORANDEL Romain", "LUMUMBA Osias", "MANHOSO DE OLIVEIRA Sylvain", "MARIN Curtis", "MARNA Jean-Charles", "MASSEMI Méroine", "MENDES Philippe (AEL)", "MOREIRA BORGES Carlos", "MOREIRA BORGES Rubem", "MUNGANGA Tridon", "NATTER Francesco-Vittorio", "NOUDJRODOU Sassou", "OLIVEIRA Lionel", "OTMANE Abdel", "OUALI Mohamed", "PASTOR Christophe", "PIERRE-CHARLES Mickaël", "POLUBOCSKO Thomas", "QUEMAR Grégory", "RICHARD-CORREIA Paolo", "ROBIN Hugo", "SACKO Fodié", "SACKO Salif", "SAINTINI Teissa", "SALAH Rachid", "SILVA Luis", "SOARES Victor", "TEIXEIRA DE ALMEIDA Tiago", "TOUTAIN Kévin", "VARGAS manuel", "YATERA Mady", "ZOUAID Adil"], "vehicules": ["FD-816-AH", "FE-142-PY", "FH-150-JN", "FN-795-BA", "FP-558-GP", "FR-770-EM", "FX-267-WJ", "FY-590-QB", "FY-762-QB", "FY-871-XE", "GD-064-JG", "GG-817-YF", "GG-823-YF", "GJ-102-RS", "GJ-383-RR", "GJ-969-RR", "GK-293-BZ", "GK-293-RJ", "GK-311-BZ", "GK-347-BZ", "GK-885-BY", "GL-010-WM", "GL-558-WL", "GQ-843-AV", "GS-650-QV", "GS-699-VR", "GS-714-SY", "GS-715-SY", "GS-873-QW", "GT-788-EM", "GX-225-DP", "GX-232-DP", "GX-456-YM", "GX-457-YM", "GX-875-YM", "GX-877-YM", "GX-882-YM", "GX-898-YM", "GY-183-NP", "GY-411-MX", "GY-707-MX", "HF-008-LM", "HF-132-LN", "HF-134-LN", "HF-271-GH", "HF-273-GH", "HF-315-GH", "HF-353-LM", "HF-546-LM", "HF-556-LM", "HF-569-LM", "HF-649-LM", "HF-657-LM", "HF-753-GH", "HF-966-GH", "HF-987-LL", "HF-989-LL", "HF-993-LL", "HF-994-LL", "HG-038-XG", "HH-009-LM", "HH-163-NM", "HH-164-NM", "HH-303-NM", "HH-562-NJ", "HH-582-NK", "HH-875-NL", "HH-918-NL", "HH-931-NL", "HH-966-NL", "HH-976-NL", "HH-989-NL", "HJ-050-ZJ", "HJ-386-JK", "HJ-401-JK", "HJ-407-JK", "HJ-414-JK", "HJ-416-ZH", "HJ-421-JK", "HJ-426-JK", "HJ-634-ZJ", "HJ-927-JK", "HJ-965-JK", "HJ-988-JK", "HK-333-NT", "HK-463-NW", "HK-534-NT", "HK-592-AA", "HK-742-NT", "HK-844-AD", "HK-870-NT"]}/*CONFIG_END*/;
+
+const params = new URLSearchParams(location.search);
+const zoneId = params.get("zone") || params.get("site");
+let CFG = null, ZONE = null;
+
+const $ = id => document.getElementById(id);
+const JOURS = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+
+function fmtDate(iso){
+  const d = new Date(iso + "T00:00:00");
+  return `${JOURS[d.getDay()]} ${d.getDate()} ${["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"][d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function storageKey(){ return `dsn_tournees_${zoneId}_${$("dateSel").value}`; }
+
+async function init(){
+  CFG = CFG_EMBEDDED;
+  try { // si un sites_config.json plus récent est présent à côté, il prime
+    const r = await fetch(CONFIG_URL, {cache:"no-store"});
+    if (r.ok) CFG = await r.json();
+  } catch(e){ /* file:// ou fichier absent : on garde la config embarquée */ }
+  ZONE = CFG.zones[zoneId];
+  if(!ZONE){
+    $("loading").textContent = "Lien invalide : zone inconnue. Contactez l'exploitation DSN.";
+    return;
+  }
+  document.title = `DSN — ${ZONE.name}`;
+  $("siteName").textContent = ZONE.name;
+
+  // datalists
+  $("dlChauffeurs").innerHTML = CFG.chauffeurs.map(c=>`<option value="${c}">`).join("");
+  $("dlVehicules").innerHTML  = CFG.vehicules.map(v=>`<option value="${v}">`).join("");
+
+  // dates : présélectionner aujourd'hui si dispo, sinon la prochaine date
+  const today = new Date().toISOString().slice(0,10);
+  let sel = ZONE.dates.find(d=>d>=today) || ZONE.dates[ZONE.dates.length-1];
+  $("dateSel").innerHTML = ZONE.dates.map(d=>`<option value="${d}" ${d===sel?"selected":""}>${fmtDate(d)}</option>`).join("");
+  $("dateSel").addEventListener("change", renderTournees);
+  $("respName").value = localStorage.getItem("dsn_resp_name") || "";
+
+  renderTournees();
+  $("loading").style.display = "none";
+  $("app").style.display = "block";
+  $("btnSend").disabled = false;
+  $("btnSend").addEventListener("click", send);
+}
+
+function renderTournees(){
+  const saved = JSON.parse(localStorage.getItem(storageKey()) || "{}");
+  $("tournees").innerHTML = ZONE.sites.map(site=>{
+    const blocs = site.tournees.map(t=>{
+      const s = saved[`${site.name}||${t}`] || {};
+      return `<div class="tournee" data-site="${site.name}" data-client="${site.master_client}" data-t="${t}">
+      <h3><span class="badge">${t}</span> <span class="check">✓</span></h3>
+      <div class="row2">
+        <div class="field">
+          <label>Chauffeur</label>
+          <input list="dlChauffeurs" data-f="chauffeur" value="${s.chauffeur||""}" placeholder="NOM Prénom" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Véhicule</label>
+          <input list="dlVehicules" data-f="vehicule" value="${s.vehicule||""}" placeholder="AA-000-AA" autocomplete="off" style="text-transform:uppercase">
+        </div>
+      </div>
+      <div class="field">
+        <label>Observations / chauffeur remplacé + motif</label>
+        <input data-f="observations" value="${s.observations||""}" placeholder="(facultatif)" autocomplete="off">
+      </div>
+    </div>`;
+    }).join("");
+    return `<div class="site-section"><h2 class="site-title">${site.name}</h2>${blocs}</div>`;
+  }).join("");
+  document.querySelectorAll("#tournees input").forEach(inp=>{
+    inp.addEventListener("input", ()=>{ saveLocal(); refreshFilled(); });
+  });
+  refreshFilled();
+  $("msg").className = "msg";
+}
+
+function collect(){
+  const rows = [];
+  document.querySelectorAll(".tournee").forEach(div=>{
+    const get = f => div.querySelector(`[data-f="${f}"]`).value.trim();
+    const row = { site: div.dataset.site, master_client: div.dataset.client,
+                  tournee: div.dataset.t, chauffeur: get("chauffeur"),
+                  vehicule: get("vehicule").toUpperCase(), observations: get("observations") };
+    if(row.chauffeur || row.vehicule || row.observations) rows.push(row);
+  });
+  return rows;
+}
+
+function saveLocal(){
+  const data = {};
+  collect().forEach(r=>data[`${r.site}||${r.tournee}`]=r);
+  localStorage.setItem(storageKey(), JSON.stringify(data));
+}
+
+function refreshFilled(){
+  document.querySelectorAll(".tournee").forEach(div=>{
+    const filled = ["chauffeur","vehicule"].some(f=>div.querySelector(`[data-f="${f}"]`).value.trim());
+    div.classList.toggle("filled", filled);
+  });
+}
+
+async function send(){
+  const rows = collect();
+  const msg = $("msg");
+  if(rows.length === 0){
+    msg.textContent = "Aucune tournée remplie."; msg.className = "msg err"; return;
+  }
+  localStorage.setItem("dsn_resp_name", $("respName").value.trim());
+  $("btnSend").disabled = true; $("btnSend").textContent = "Envoi en cours…";
+  try {
+    const r = await fetch(WEBHOOK_URL, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        zone: zoneId, zone_name: ZONE.name,
+        date: $("dateSel").value, responsable: $("respName").value.trim(),
+        submitted_at: new Date().toISOString(), rows
+      })
+    });
+    if(!r.ok) throw new Error(r.status);
+    msg.textContent = `✓ Envoyé — ${rows.length} tournée(s) pour le ${fmtDate($("dateSel").value)}`;
+    msg.className = "msg ok";
+  } catch(e){
+    msg.textContent = "Échec de l'envoi. Vérifiez la connexion et réessayez (votre saisie est conservée).";
+    msg.className = "msg err";
+  }
+  $("btnSend").disabled = false; $("btnSend").textContent = "Envoyer la journée";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+init();
+</script>
+</body>
+</html>

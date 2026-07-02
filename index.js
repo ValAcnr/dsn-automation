@@ -15,6 +15,8 @@ const excelVehiculesV2  = require('./modules/excel-vehicules-v2');
 const gpsMatcher        = require('./modules/gps-matcher');
 const parserCarburant   = require('./modules/parser-carburant');
 const carburantAlertes  = require('./modules/carburant-alertes');
+const tournees          = require('./modules/tournees');
+const xlsx              = require('xlsx');
 
 const PORT = process.env.PORT || 3000;
 
@@ -564,6 +566,60 @@ app.get('/api/carburant/alertes', (_req, res) => {
   } catch (err) {
     logger.err(`GET /api/carburant/alertes : ${err.message}`);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Tournées journalières ────────────────────────────────────────────────────
+
+app.post('/api/tournees', (req, res) => {
+  const b = req.body;
+  const id = b && (b.zone || b.site);
+  if (!b || !id || !b.date || !Array.isArray(b.rows) || b.rows.length === 0) {
+    return res.status(400).json({ ok: false, error: 'Payload invalide : zone, date et rows requis' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date)) {
+    return res.status(400).json({ ok: false, error: 'Date invalide (attendu YYYY-MM-DD)' });
+  }
+  try {
+    const payload = { ...b, submitted_at: b.submitted_at || new Date().toISOString() };
+    const total = tournees.addSubmission(payload);
+    logger.ok(`[tournées] soumission reçue : zone=${id} date=${b.date} rows=${b.rows.length} (soumissions totales: ${total})`);
+    res.json({ ok: true, saved: b.rows.length });
+  } catch (e) {
+    logger.err(`POST /api/tournees : ${e.message}`);
+    res.status(500).json({ ok: false, error: 'Écriture impossible' });
+  }
+});
+
+app.get('/api/tournees', (_req, res) => {
+  try {
+    res.json(tournees.getFlatRows());
+  } catch (e) {
+    logger.err(`GET /api/tournees : ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/tournees/export', (_req, res) => {
+  try {
+    const rows = tournees.getFlatRows();
+    const headers = ['Date', 'Site', 'Tournée', 'Chauffeur', 'Véhicule', 'Observations', 'Responsable', 'Heure d\'envoi'];
+    const data = [
+      headers,
+      ...rows.map(r => [r.date, r.site, r.tournee, r.chauffeur, r.vehicule, r.observations, r.responsable, r.heure_envoi]),
+    ];
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.aoa_to_sheet(data);
+    ws['!cols'] = [10, 20, 12, 22, 14, 30, 18, 10].map(w => ({ wch: w }));
+    xlsx.utils.book_append_sheet(wb, ws, 'Tournées');
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = `tournees_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch (e) {
+    logger.err(`GET /api/tournees/export : ${e.message}`);
+    res.status(500).json({ error: e.message });
   }
 });
 

@@ -1,0 +1,542 @@
+{
+ "zones": {
+  "bead": {
+   "source_file": "BEAD.xlsx",
+   "sites": [
+    {
+     "name": "BEAD",
+     "master_client": "BEAD",
+     "tournees": [
+      "T01-T03",
+      "T02",
+      "T04"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "BEAD"
+  },
+  "choisy_fordvitry_dafmassy_daflouvres": {
+   "source_file": "CHOISY_FORDVITRY_DAFMASSY_DAFLOUVRES.xlsx",
+   "sites": [
+    {
+     "name": "CHOISY PIÈCES AUTO",
+     "master_client": "CPA 94",
+     "tournees": [
+      "T01",
+      "T03",
+      "T04",
+      "T06",
+      "POP'S midi",
+      "POP'S soir",
+      "T0",
+      "T05",
+      "T02",
+      "NAV matin"
+     ]
+    },
+    {
+     "name": "FORD VITRY",
+     "master_client": "FORD 94",
+     "tournees": [
+      "T01"
+     ]
+    },
+    {
+     "name": "DAF MASSY",
+     "master_client": "DAF 91",
+     "tournees": [
+      "T01 (badge)",
+      "T02"
+     ]
+    },
+    {
+     "name": "DAF LOUVRES",
+     "master_client": "DAF 95",
+     "tournees": [
+      "T01"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "CHOISY PIÈCES AUTO / FORD VITRY / DAF MASSY / DAF LOUVRES"
+  },
+  "coignieres_pieces_auto": {
+   "source_file": "COIGNIERES_PIECES_AUTO.xlsx",
+   "sites": [
+    {
+     "name": "COIGNIÈRES PIÈCES AUTO",
+     "master_client": "CPA 78",
+     "tournees": [
+      "T02",
+      "T03",
+      "T04",
+      "T05",
+      "T06",
+      "T01",
+      "T08"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "COIGNIÈRES PIÈCES AUTO"
+  },
+  "idlp_fresnes": {
+   "source_file": "IDLP_FRESNES.xlsx",
+   "sites": [
+    {
+     "name": "IDLP FRESNES",
+     "master_client": "IDLP 94",
+     "tournees": [
+      "T04",
+      "T05",
+      "T05 Bis",
+      "T07",
+      "T09",
+      "T10",
+      "T11",
+      "T13",
+      "NAV-MA 94-78",
+      "NAV-AP 94-78",
+      "NAV-01 94-92",
+      "NAV-02 94-92",
+      "NAV Copoletti",
+      "T15",
+      "NAV-EVREUX",
+      "T01",
+      "T08",
+      "T06"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "IDLP FRESNES"
+  },
+  "idlp_grigny": {
+   "source_file": "IDLP_GRIGNY.xlsx",
+   "sites": [
+    {
+     "name": "IDLP GRIGNY",
+     "master_client": "IDLP 91",
+     "tournees": [
+      "T42",
+      "T43",
+      "T44",
+      "T45",
+      "T41"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "IDLP GRIGNY"
+  },
+  "idlp_orgeval_apac_cdpa": {
+   "source_file": "IDLP_ORGEVAL_APAC_CDPA_.xlsx",
+   "sites": [
+    {
+     "name": "IDLP ORGEVAL",
+     "master_client": "IDLP 78",
+     "tournees": [
+      "T33",
+      "T34",
+      "T35",
+      "T35 bis",
+      "T36",
+      "T37",
+      "T31",
+      "T32",
+      "T38",
+      "T33-35-36 a-m",
+      "T33 bis"
+     ]
+    },
+    {
+     "name": "APAC",
+     "master_client": "APAC 78",
+     "tournees": [
+      "T01"
+     ]
+    },
+    {
+     "name": "CDPA",
+     "master_client": "CDPA 78",
+     "tournees": [
+      "T01"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "IDLP ORGEVAL / APAC / CDPA"
+  },
+  "ned_92_95": {
+   "source_file": "NED_92_95.xlsx",
+   "sites": [
+    {
+     "name": "NED 92",
+     "master_client": "NED 92",
+     "tournees": [
+      "HA",
+      "HB",
+      "HC",
+      "HD",
+      "HE",
+      "HF",
+      "HG",
+      "HH",
+      "NAV-92 (ramasse)",
+      "NAV 92-95"
+     ]
+    },
+    {
+     "name": "NED 95",
+     "master_client": "NED 95",
+     "tournees": [
+      "VA",
+      "VB",
+      "VC"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "NED 92 / NED 95"
+  },
+  "ouest_injection": {
+   "source_file": "OUEST_INJECTION.xlsx",
+   "sites": [
+    {
+     "name": "OUEST INJECTION",
+     "master_client": "OUEST",
+     "tournees": [
+      "T02",
+      "T03",
+      "T04",
+      "T05",
+      "T06",
+      "NAV",
+      "T07",
+      "T08",
+      "T08 BIS",
+      "T09",
+      "T10",
+      "T11",
+      "NAV PAP",
+      "T13",
+      "T14",
+      "T15"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "OUEST INJECTION"
+  },
+  "pap_92": {
+   "source_file": "PAP_92.xlsx",
+   "sites": [
+    {
+     "name": "PAP 92",
+     "master_client": "PAP 92",
+     "tournees": [
+      "T80",
+      "T81",
+      "T82",
+      "T77-51",
+      "T10",
+      "T45",
+      "T60",
+      "T89",
+      "T45-91",
+      "T83"
+     ]
+    }
+   ],
+   "dates": [
+    "2026-07-03",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17"
+   ],
+   "name": "PAP 92"
+  }
+ },
+ "chauffeurs": [
+  "ABAILLE Quentin",
+  "ABRAHAM Yann",
+  "ALBERICI Jérémy",
+  "ALEXANDRE David",
+  "ALMEIDA FERNANDES Adrien",
+  "ALVES RODRIGUES Rui",
+  "ASSANI Djoumbefoumou",
+  "AURIEL Vincent",
+  "AZEDDOU Hicham",
+  "BABACI Joachim",
+  "BALY Luis",
+  "BARON Cyril",
+  "BATTEUX Antoine",
+  "BATTEUX Nicolas",
+  "BAZANTE Corentin",
+  "BELTAI Steevyn",
+  "BEN DAHMAN Karim",
+  "BERTE Grégory",
+  "BIENFAIT Nathan",
+  "BOUKHIAR Djilali",
+  "BOURDIN Mickaël",
+  "BOUZON Jacques",
+  "BRIAND Matéo",
+  "BUCKTOWSING Calvin",
+  "CHADET Christopher",
+  "CHIBIKH Sofiane",
+  "CIMEUS Jimmy",
+  "COUTO PEREIRA Luis",
+  "DA SILVA Bruno",
+  "DE BOISROLIN Mathis",
+  "DE SOUSA Diego",
+  "DELAG Sébastien",
+  "DELAPORTE Anthony",
+  "DIBOULA Stanley",
+  "DO ROSARIO Joao",
+  "DOUCHEMENT Thomas",
+  "DURET Florian",
+  "FRANCIS Charles",
+  "GIMENEZ-PONS Jordan",
+  "GOMIS François",
+  "GONCALVES Jessy en form avec OSIAS K",
+  "GOYETE Curtis",
+  "GRIVALLIERS Cédric",
+  "GUALANDRIS Jérôme",
+  "GUILLAUME Nixon",
+  "HAKOULA Julien",
+  "HEGO Mathieu",
+  "HERY Ludwig",
+  "HUVELIN Christopher",
+  "IDOUKDIM Lahoucine",
+  "JASAWANT Johan",
+  "JELINEK Aldwin",
+  "JOBART Ethan",
+  "KANTE Samba",
+  "KODJO Biletchi Samuel",
+  "KOUDJOUNOU Komlan (AEL)",
+  "LAMBERT Nicolas",
+  "LATRAYE Julien",
+  "LE GRILLE Benjamin",
+  "LIMA MANHOSO ROMEU",
+  "LORANDEL Romain",
+  "LUMUMBA Osias",
+  "MANHOSO DE OLIVEIRA Sylvain",
+  "MARIN Curtis",
+  "MARNA Jean-Charles",
+  "MASSEMI Méroine",
+  "MENDES Philippe (AEL)",
+  "MOREIRA BORGES Carlos",
+  "MOREIRA BORGES Rubem",
+  "MUNGANGA Tridon",
+  "NATTER Francesco-Vittorio",
+  "NOUDJRODOU Sassou",
+  "OLIVEIRA Lionel",
+  "OTMANE Abdel",
+  "OUALI Mohamed",
+  "PASTOR Christophe",
+  "PIERRE-CHARLES Mickaël",
+  "POLUBOCSKO Thomas",
+  "QUEMAR Grégory",
+  "RICHARD-CORREIA Paolo",
+  "ROBIN Hugo",
+  "SACKO Fodié",
+  "SACKO Salif",
+  "SAINTINI Teissa",
+  "SALAH Rachid",
+  "SILVA Luis",
+  "SOARES Victor",
+  "TEIXEIRA DE ALMEIDA Tiago",
+  "TOUTAIN Kévin",
+  "VARGAS manuel",
+  "YATERA Mady",
+  "ZOUAID Adil"
+ ],
+ "vehicules": [
+  "FD-816-AH",
+  "FE-142-PY",
+  "FH-150-JN",
+  "FN-795-BA",
+  "FP-558-GP",
+  "FR-770-EM",
+  "FX-267-WJ",
+  "FY-590-QB",
+  "FY-762-QB",
+  "FY-871-XE",
+  "GD-064-JG",
+  "GG-817-YF",
+  "GG-823-YF",
+  "GJ-102-RS",
+  "GJ-383-RR",
+  "GJ-969-RR",
+  "GK-293-BZ",
+  "GK-293-RJ",
+  "GK-311-BZ",
+  "GK-347-BZ",
+  "GK-885-BY",
+  "GL-010-WM",
+  "GL-558-WL",
+  "GQ-843-AV",
+  "GS-650-QV",
+  "GS-699-VR",
+  "GS-714-SY",
+  "GS-715-SY",
+  "GS-873-QW",
+  "GT-788-EM",
+  "GX-225-DP",
+  "GX-232-DP",
+  "GX-456-YM",
+  "GX-457-YM",
+  "GX-875-YM",
+  "GX-877-YM",
+  "GX-882-YM",
+  "GX-898-YM",
+  "GY-183-NP",
+  "GY-411-MX",
+  "GY-707-MX",
+  "HF-008-LM",
+  "HF-132-LN",
+  "HF-134-LN",
+  "HF-271-GH",
+  "HF-273-GH",
+  "HF-315-GH",
+  "HF-353-LM",
+  "HF-546-LM",
+  "HF-556-LM",
+  "HF-569-LM",
+  "HF-649-LM",
+  "HF-657-LM",
+  "HF-753-GH",
+  "HF-966-GH",
+  "HF-987-LL",
+  "HF-989-LL",
+  "HF-993-LL",
+  "HF-994-LL",
+  "HG-038-XG",
+  "HH-009-LM",
+  "HH-163-NM",
+  "HH-164-NM",
+  "HH-303-NM",
+  "HH-562-NJ",
+  "HH-582-NK",
+  "HH-875-NL",
+  "HH-918-NL",
+  "HH-931-NL",
+  "HH-966-NL",
+  "HH-976-NL",
+  "HH-989-NL",
+  "HJ-050-ZJ",
+  "HJ-386-JK",
+  "HJ-401-JK",
+  "HJ-407-JK",
+  "HJ-414-JK",
+  "HJ-416-ZH",
+  "HJ-421-JK",
+  "HJ-426-JK",
+  "HJ-634-ZJ",
+  "HJ-927-JK",
+  "HJ-965-JK",
+  "HJ-988-JK",
+  "HK-333-NT",
+  "HK-463-NW",
+  "HK-534-NT",
+  "HK-592-AA",
+  "HK-742-NT",
+  "HK-844-AD",
+  "HK-870-NT"
+ ]
+}

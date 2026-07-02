@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournées — DSN</title>
+  <script src="/app/layout.js" defer></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1a2f5a; --white: #fff;
+      --gray-50: #f8fafc; --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0; --gray-400: #94a3b8;
+      --gray-600: #475569; --gray-800: #1e293b;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50); color: var(--gray-800); min-height: 100vh;
+    }
+
+    .header {
+      background: var(--navy); color: #fff;
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: var(--shadow); position: sticky; top: 0; z-index: 50;
+    }
+    .header-title { font-size: 16px; font-weight: 700; }
+    .header-meta  { font-size: 12px; opacity: .6; }
+
+    .main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .section-title { font-size: 15px; font-weight: 600; }
+    .toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .ctrl {
+      padding: 8px 12px; border: 1px solid var(--gray-200);
+      border-radius: var(--radius); font-size: 13px; outline: none;
+      background: var(--white); color: var(--gray-800); font-family: inherit;
+    }
+    .ctrl:focus { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(26,47,90,.1); }
+    input.ctrl  { width: 180px; }
+    select.ctrl { cursor: pointer; min-width: 200px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; text-decoration: none; transition: opacity .15s;
+      font-family: inherit;
+    }
+    .btn:hover { opacity: .82; }
+    .btn-primary { background: var(--navy); color: var(--white); }
+    .btn-ghost   { background: var(--gray-100); color: var(--gray-800); }
+
+    .table-wrapper {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow-x: auto;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--gray-50); border-bottom: 2px solid var(--gray-200); }
+    th {
+      padding: 11px 16px; text-align: left; font-weight: 600;
+      color: var(--gray-600); font-size: 11px;
+      text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+    }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f0f4ff; }
+
+    .name-cell { font-weight: 500; }
+    .muted     { color: var(--gray-400); font-size: 12px; }
+
+    .placeholder {
+      text-align: center; padding: 60px 20px;
+      color: var(--gray-400); font-size: 14px;
+    }
+    .placeholder strong { display: block; font-size: 16px; margin-bottom: 6px; color: var(--gray-600); }
+
+    .count-badge {
+      background: var(--gray-100); color: var(--gray-600);
+      font-size: 11px; font-weight: 600; padding: 2px 8px;
+      border-radius: 20px; margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">Tournées journalières</div>
+  <div class="header-meta" id="last-update"></div>
+</header>
+
+<main class="main">
+
+  <div class="toolbar">
+    <div class="section-title">
+      Soumissions reçues
+      <span class="count-badge" id="count-badge">—</span>
+    </div>
+    <div class="toolbar-right">
+      <input  type="date" class="ctrl" id="filter-date" title="Filtrer par date">
+      <select class="ctrl" id="filter-zone">
+        <option value="">Toutes les zones</option>
+      </select>
+      <button class="btn btn-ghost" onclick="load()">&#8635; Actualiser</button>
+      <a href="/api/tournees/export" class="btn btn-primary">&#128202; Télécharger Excel</a>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div id="container" class="placeholder">Chargement…</div>
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+let allRows = [];
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return esc(iso);
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function populateZoneFilter() {
+  const sel = document.getElementById('filter-zone');
+  const zones = [...new Set(allRows.map(r => r.zone_name).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Toutes les zones</option>' +
+    zones.map(z => `<option value="${esc(z)}"${z === cur ? ' selected' : ''}>${esc(z)}</option>`).join('');
+}
+
+function render() {
+  const dateFilter = document.getElementById('filter-date').value;
+  const zoneFilter = document.getElementById('filter-zone').value;
+
+  const rows = allRows.filter(r =>
+    (!dateFilter || r.date === dateFilter) &&
+    (!zoneFilter || r.zone_name === zoneFilter)
+  );
+
+  document.getElementById('count-badge').textContent = rows.length + ' ligne' + (rows.length !== 1 ? 's' : '');
+
+  const container = document.getElementById('container');
+  if (!rows.length) {
+    container.innerHTML = '<div class="placeholder"><strong>Aucune soumission</strong>Aucune tournée ne correspond aux filtres sélectionnés.</div>';
+    return;
+  }
+
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th>Date</th>
+    <th>Site</th>
+    <th>Tournée</th>
+    <th>Chauffeur</th>
+    <th>Véhicule</th>
+    <th>Observations</th>
+    <th>Responsable</th>
+    <th>Heure d'envoi</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="name-cell" style="white-space:nowrap">${esc(fmtDate(r.date))}</td>
+      <td>${esc(r.site || r.zone_name || '')}</td>
+      <td><strong>${esc(r.tournee)}</strong></td>
+      <td>${esc(r.chauffeur) || '<span class="muted">—</span>'}</td>
+      <td style="font-variant-numeric:tabular-nums">${esc(r.vehicule) || '<span class="muted">—</span>'}</td>
+      <td>${esc(r.observations) || '<span class="muted">—</span>'}</td>
+      <td class="muted">${esc(r.responsable)}</td>
+      <td class="muted" style="white-space:nowrap">${esc(r.heure_envoi)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbl.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(tbl);
+}
+
+async function load() {
+  document.getElementById('container').innerHTML = '<div class="placeholder">Chargement…</div>';
+  try {
+    const r = await fetch('/api/tournees');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    allRows = await r.json();
+    populateZoneFilter();
+    render();
+    document.getElementById('last-update').textContent =
+      'Actualisé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    document.getElementById('container').innerHTML =
+      `<div class="placeholder"><strong>Erreur de chargement</strong>${esc(e.message)}</div>`;
+  }
+}
+
+document.getElementById('filter-date').addEventListener('change', render);
+document.getElementById('filter-zone').addEventListener('change', render);
+
+load();
+</script>
+</body>
+</html>
