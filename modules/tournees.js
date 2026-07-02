@@ -1,14 +1,14 @@
 'use strict';
 // Stockage et injection des soumissions "tournées journalières".
-// Accumulation dans data/tournees/submissions.json (tableau de soumissions).
+// Format : un fichier JSON par soumission dans data/tournees/submissions/
 // Chaque soumission contient : zone, zone_name, date, responsable, submitted_at, rows[].
 
-const fs            = require('fs');
-const path          = require('path');
-const { execFile }  = require('child_process');
+const fs           = require('fs');
+const path         = require('path');
+const { execFile } = require('child_process');
 
-const SUBMISSIONS_FILE = path.join(__dirname, '..', 'data', 'tournees', 'submissions.json');
-const FILL_SCRIPT      = path.join(__dirname, '..', 'fill_tournees.py');
+const SUBMISSIONS_DIR = path.join(__dirname, '..', 'data', 'tournees', 'submissions');
+const FILL_SCRIPT     = path.join(__dirname, '..', 'fill_tournees.py');
 
 // Chemin vers le fichier maître Excel — modifiable via variable d'environnement
 // pour changer de période sans redéploiement.
@@ -16,31 +16,42 @@ const MASTER_XLSX = process.env.TOURNEES_MASTER_XLSX ||
   path.join(__dirname, '..', 'data', 'tournees', 'Tournées_journalières_Juillet_2026.xlsx');
 
 // ── Verrou simple contre les exécutions concurrentes de fill_tournees.py ────
-// openpyxl n'aime pas les écritures simultanées sur le même fichier xlsx.
 let _fillRunning = false;
 let _fillPending = false;
 
 function ensureDir() {
-  const dir = path.dirname(SUBMISSIONS_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(SUBMISSIONS_DIR)) fs.mkdirSync(SUBMISSIONS_DIR, { recursive: true });
 }
 
+// Lit toutes les soumissions depuis SUBMISSIONS_DIR (et le sous-dossier traite/ si présent).
 function readAll() {
-  try {
-    if (fs.existsSync(SUBMISSIONS_FILE)) {
-      return JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, 'utf8'));
+  const subs = [];
+  const dirs = [SUBMISSIONS_DIR, path.join(SUBMISSIONS_DIR, 'traite')];
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    const files = fs.readdirSync(dir).filter(n => n.endsWith('.json')).sort();
+    for (const f of files) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+        // Chaque fichier contient une seule soumission (objet), mais on accepte
+        // aussi un tableau pour la compatibilité avec des fichiers migrés.
+        if (Array.isArray(raw)) subs.push(...raw);
+        else subs.push(raw);
+      } catch { /* fichier corrompu : ignoré */ }
     }
-  } catch { /* fichier corrompu ou absent : on repart à zéro */ }
-  return [];
+  }
+  return subs;
 }
 
-// Ajoute une soumission et renvoie le nombre total de soumissions.
+// Écrit une soumission dans un fichier individuel et renvoie le nom du fichier.
 function addSubmission(payload) {
   ensureDir();
-  const all = readAll();
-  all.push(payload);
-  fs.writeFileSync(SUBMISSIONS_FILE, JSON.stringify(all, null, 2), 'utf8');
-  return all.length;
+  const safeZone = String(payload.zone || 'zone').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+  const date     = String(payload.date || 'nodate').replace(/[^0-9-]/g, '');
+  const ts       = Date.now();
+  const fname    = `${safeZone}_${date}_${ts}.json`;
+  fs.writeFileSync(path.join(SUBMISSIONS_DIR, fname), JSON.stringify(payload, null, 2), 'utf8');
+  return fname;
 }
 
 // Renvoie les lignes aplaties (une par tournée) triées par date desc.
@@ -75,13 +86,9 @@ function getFlatRows() {
 }
 
 // Lance fill_tournees.py en sous-processus après chaque soumission.
-// Le verrou (_fillRunning / _fillPending) garantit qu'une seule instance tourne
-// à la fois ; si une soumission arrive pendant l'exécution, on relance juste après.
+// Passe le dossier SUBMISSIONS_DIR (fill_tournees.py gère fichier ou dossier).
 function runFillScript() {
-  if (_fillRunning) {
-    _fillPending = true;
-    return;
-  }
+  if (_fillRunning) { _fillPending = true; return; }
   if (!fs.existsSync(MASTER_XLSX)) {
     console.warn(`[tournées] fill_tournees.py ignoré : fichier maître absent (${MASTER_XLSX})`);
     return;
@@ -90,11 +97,10 @@ function runFillScript() {
     console.warn(`[tournées] fill_tournees.py introuvable : ${FILL_SCRIPT}`);
     return;
   }
-
   _fillRunning = true;
   execFile(
     'python3',
-    [FILL_SCRIPT, '--master', MASTER_XLSX, '--submissions', SUBMISSIONS_FILE],
+    [FILL_SCRIPT, '--master', MASTER_XLSX, '--submissions', SUBMISSIONS_DIR],
     { cwd: path.join(__dirname, '..') },
     (err, stdout, stderr) => {
       _fillRunning = false;
@@ -103,10 +109,7 @@ function runFillScript() {
         console.error(`[tournées] fill_tournees.py échec : ${err.message}`);
         if (stderr && stderr.trim()) console.error(stderr.trim());
       }
-      if (_fillPending) {
-        _fillPending = false;
-        runFillScript();
-      }
+      if (_fillPending) { _fillPending = false; runFillScript(); }
     }
   );
 }

@@ -593,8 +593,8 @@ app.post('/api/tournees', (req, res) => {
   }
   try {
     const payload = { ...b, submitted_at: b.submitted_at || new Date().toISOString() };
-    const total = tournees.addSubmission(payload);
-    logger.ok(`[tournées] soumission reçue : zone=${id} date=${b.date} rows=${b.rows.length} (total: ${total})`);
+    const fname = tournees.addSubmission(payload);
+    logger.ok(`[tournées] soumission reçue : zone=${id} date=${b.date} rows=${b.rows.length} → ${fname}`);
     res.json({ ok: true, saved: b.rows.length });
     // Injection dans le fichier maître après la réponse (ne bloque pas le client)
     tournees.runFillScript();

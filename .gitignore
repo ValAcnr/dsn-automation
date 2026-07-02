@@ -13,4 +13,4 @@ config/app-pin.json
 .env
 data/gps-hours.json
 data/carburant-alertes.json
-data/tournees/submissions.json
+data/tournees/submissions/

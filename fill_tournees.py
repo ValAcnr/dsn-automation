@@ -132,7 +132,11 @@ def load_submissions(path_str):
         subs = []
         for f in sorted(p.glob('*.json')):
             try:
-                subs.append(json.loads(f.read_text('utf-8')))
+                data = json.loads(f.read_text('utf-8'))
+                if isinstance(data, list):
+                    subs.extend(data)
+                else:
+                    subs.append(data)
             except Exception as e:
                 print(f'[fill_tournees] ⚠ {f.name} ignoré : {e}', file=sys.stderr)
     else:
