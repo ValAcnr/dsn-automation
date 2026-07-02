@@ -90,6 +90,16 @@
       font-size: 11px; font-weight: 600; padding: 2px 8px;
       border-radius: 20px; margin-left: 8px;
     }
+
+    .upload-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: var(--radius); padding: 10px 14px;
+      margin-bottom: 8px; box-shadow: var(--shadow);
+    }
+    .upload-bar label { font-size: 12px; font-weight: 600; color: var(--gray-600); white-space: nowrap; }
+    #upload-input { font-size: 12px; color: var(--gray-800); flex: 1; min-width: 0; }
+    #upload-status { font-size: 12px; }
   </style>
 </head>
 <body>
@@ -114,6 +124,13 @@
       <button class="btn btn-ghost" onclick="load()">&#8635; Actualiser</button>
       <a href="/api/tournees/master" class="btn btn-primary">&#128202; Télécharger fichier maître</a>
     </div>
+  </div>
+
+  <div class="upload-bar">
+    <label for="upload-input">&#128193; Déposer fichier maître :</label>
+    <input type="file" id="upload-input" accept=".xlsx">
+    <button class="btn btn-ghost" id="upload-btn" onclick="uploadMaster()" style="padding:6px 14px;">&#8679; Uploader</button>
+    <span id="upload-status"></span>
   </div>
 
   <div id="master-info" style="font-size:12px;color:var(--gray-600);margin-bottom:10px;min-height:18px"></div>
@@ -151,6 +168,46 @@ function populateZoneFilter() {
       .sort(([, a], [, b]) => a.localeCompare(b))
       .map(([id, name]) => `<option value="${esc(id)}"${id === cur ? ' selected' : ''}>${esc(name)}</option>`)
       .join('');
+}
+
+async function uploadMaster() {
+  const input  = document.getElementById('upload-input');
+  const status = document.getElementById('upload-status');
+  const btn    = document.getElementById('upload-btn');
+
+  if (!input.files.length) {
+    status.textContent = 'Sélectionnez un fichier .xlsx d\'abord.';
+    status.style.color = 'var(--gray-600)';
+    return;
+  }
+  const file = input.files[0];
+  if (!file.name.toLowerCase().endsWith('.xlsx')) {
+    status.textContent = 'Seuls les fichiers .xlsx sont acceptés.';
+    status.style.color = '#e53e3e';
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = 'Envoi en cours…';
+  status.style.color = 'var(--gray-600)';
+
+  try {
+    const fd = new FormData();
+    fd.append('fichier', file);
+    const r    = await fetch('/api/tournees/master/upload', { method: 'POST', body: fd });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || 'Erreur serveur');
+    const ko = Math.round(json.size / 1024);
+    status.textContent = `✓ Mis à jour (${ko} Ko)`;
+    status.style.color = '#276749';
+    input.value = '';
+    await loadMasterInfo();
+  } catch (e) {
+    status.textContent = '✗ ' + e.message;
+    status.style.color = '#e53e3e';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function loadMasterInfo() {

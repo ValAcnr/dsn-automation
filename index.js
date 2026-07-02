@@ -16,7 +16,18 @@ const gpsMatcher        = require('./modules/gps-matcher');
 const parserCarburant   = require('./modules/parser-carburant');
 const carburantAlertes  = require('./modules/carburant-alertes');
 const tournees          = require('./modules/tournees');
-const xlsx              = require('xlsx');
+const multer            = require('multer');
+
+const masterUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (path.extname(file.originalname).toLowerCase() !== '.xlsx') {
+      return cb(new Error('Seuls les fichiers .xlsx sont acceptés'));
+    }
+    cb(null, true);
+  },
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -583,8 +594,10 @@ app.post('/api/tournees', (req, res) => {
   try {
     const payload = { ...b, submitted_at: b.submitted_at || new Date().toISOString() };
     const total = tournees.addSubmission(payload);
-    logger.ok(`[tournées] soumission reçue : zone=${id} date=${b.date} rows=${b.rows.length} (soumissions totales: ${total})`);
+    logger.ok(`[tournées] soumission reçue : zone=${id} date=${b.date} rows=${b.rows.length} (total: ${total})`);
     res.json({ ok: true, saved: b.rows.length });
+    // Injection dans le fichier maître après la réponse (ne bloque pas le client)
+    tournees.runFillScript();
   } catch (e) {
     logger.err(`POST /api/tournees : ${e.message}`);
     res.status(500).json({ ok: false, error: 'Écriture impossible' });
@@ -600,49 +613,47 @@ app.get('/api/tournees', (_req, res) => {
   }
 });
 
-app.get('/api/tournees/export', (req, res) => {
-  const today  = new Date().toISOString().slice(0, 10);
-  const zoneId = String(req.query.zone || '').trim();
-
-  try {
-    if (zoneId) {
-      // ── Un seul .xlsx pour la zone demandée ──────────────────────────────
-      const wb  = tournees.buildZoneWorkbook(zoneId);
-      const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-      const safe = zoneId.replace(/[^a-z0-9_-]/gi, '_');
-      res.setHeader('Content-Disposition', `attachment; filename="tournees_${safe}_${today}.xlsx"`);
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      return res.send(buf);
-    }
-
-    // ── Toutes les zones : un .xlsx par zone dans un .zip ─────────────────
-    const cfg     = tournees.loadSitesConfig();
-    const zoneIds = Object.keys(cfg.zones || {});
-    const archive = archiver('zip', { zlib: { level: 6 } });
-
-    res.setHeader('Content-Disposition', `attachment; filename="tournees_toutes_zones_${today}.zip"`);
-    res.setHeader('Content-Type', 'application/zip');
-    archive.pipe(res);
-    archive.on('error', err => {
-      logger.err(`ZIP tournées : ${err.message}`);
-    });
-
-    for (const zid of zoneIds) {
-      try {
-        const wb   = tournees.buildZoneWorkbook(zid);
-        const buf  = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        const safe = zid.replace(/[^a-z0-9_-]/gi, '_');
-        archive.append(buf, { name: `tournees_${safe}_${today}.xlsx` });
-      } catch (e) {
-        logger.err(`ZIP tournées — zone ${zid} : ${e.message}`);
-      }
-    }
-
-    archive.finalize();
-  } catch (e) {
-    logger.err(`GET /api/tournees/export : ${e.message}`);
-    if (!res.headersSent) res.status(500).json({ error: e.message });
+// ── Fichier maître Excel — téléchargement direct ──────────────────────────────
+app.get('/api/tournees/master', (_req, res) => {
+  const info = tournees.masterInfo();
+  if (!info.exists) {
+    return res.status(404).json({ error: 'Fichier maître non disponible (pas encore déposé sur le serveur)' });
   }
+  res.download(info.path, path.basename(info.path), err => {
+    if (err && !res.headersSent) logger.err(`Download tournées master : ${err.message}`);
+  });
+});
+
+// ── Infos fichier maître (existence + mtime pour affichage dashboard) ─────────
+app.get('/api/tournees/master/info', (_req, res) => {
+  try {
+    res.json(tournees.masterInfo());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Upload fichier maître (depuis le dashboard, sans accès SSH) ────────────────
+app.post('/api/tournees/master/upload', (req, res) => {
+  masterUpload.single('fichier')(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Fichier trop volumineux (20 Mo max)'
+        : err.message;
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu' });
+    try {
+      const dir = path.dirname(tournees.MASTER_XLSX);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(tournees.MASTER_XLSX, req.file.buffer);
+      logger.ok(`[tournées] fichier maître mis à jour : ${req.file.originalname} (${req.file.size} octets)`);
+      res.json({ ok: true, size: req.file.size, name: req.file.originalname });
+    } catch (e) {
+      logger.err(`POST /api/tournees/master/upload : ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
 
 app.get('/api/depots', (_req, res) => {
